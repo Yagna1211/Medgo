@@ -224,15 +224,15 @@ export const Dashboard = ({ user, onLogout }: DashboardProps) => {
           </TabsContent>
 
           <TabsContent value="scanner">
-            <MedicineScanner />
+            <MedicineScanner user={user} />
           </TabsContent>
 
           <TabsContent value="symptoms">
-            <SymptomAnalyzer />
+            <SymptomAnalyzer user={user} />
           </TabsContent>
 
           <TabsContent value="history">
-            <UserHistory />
+            <UserHistory user={user} />
           </TabsContent>
 
           <TabsContent value="profile">

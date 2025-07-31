@@ -19,7 +19,8 @@ import {
   Brain,
   Stethoscope
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SymptomAnalysis {
   conditions: Array<{
@@ -33,13 +34,16 @@ interface SymptomAnalysis {
   generalRecommendations: string[];
 }
 
-export const SymptomAnalyzer = () => {
+interface SymptomAnalyzerProps {
+  user: any;
+}
+
+export const SymptomAnalyzer = ({ user }: SymptomAnalyzerProps) => {
   const [symptoms, setSymptoms] = useState<string[]>([]);
   const [currentSymptom, setCurrentSymptom] = useState("");
   const [additionalInfo, setAdditionalInfo] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<SymptomAnalysis | null>(null);
-  const { toast } = useToast();
 
   const addSymptom = () => {
     if (currentSymptom.trim() && !symptoms.includes(currentSymptom.trim())) {
@@ -54,11 +58,7 @@ export const SymptomAnalyzer = () => {
 
   const analyzeSymptoms = async () => {
     if (symptoms.length === 0) {
-      toast({
-        title: "No symptoms added",
-        description: "Please add at least one symptom to analyze.",
-        variant: "destructive",
-      });
+      toast("Please add at least one symptom to analyze.");
       return;
     }
 
@@ -118,17 +118,26 @@ export const SymptomAnalyzer = () => {
         ]
       };
 
+      // Store analysis in database
+      const { error } = await supabase
+        .from('symptom_analyses')
+        .insert({
+          user_id: user.id,
+          symptoms: symptoms,
+          additional_info: additionalInfo,
+          urgency_level: mockAnalysis.urgency,
+          possible_conditions: mockAnalysis.conditions,
+          general_recommendations: mockAnalysis.generalRecommendations.join(', ')
+        });
+
+      if (error) {
+        throw error;
+      }
+
       setAnalysis(mockAnalysis);
-      toast({
-        title: "Analysis Complete!",
-        description: `Found ${mockAnalysis.conditions.length} possible conditions`,
-      });
-    } catch (error) {
-      toast({
-        title: "Analysis Failed",
-        description: "Unable to analyze symptoms. Please try again.",
-        variant: "destructive",
-      });
+      toast(`Analysis Complete! Found ${mockAnalysis.conditions.length} possible conditions and saved to your history.`);
+    } catch (error: any) {
+      toast(`Analysis failed: ${error.message}`);
     } finally {
       setIsAnalyzing(false);
     }

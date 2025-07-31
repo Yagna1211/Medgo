@@ -5,7 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Stethoscope, Eye, EyeOff, Mail, Lock, User } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AuthFormProps {
   onAuthSuccess: (user: any) => void;
@@ -20,7 +21,6 @@ export const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
     firstName: "",
     lastName: "",
   });
-  const { toast } = useToast();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
@@ -34,28 +34,21 @@ export const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
     setIsLoading(true);
     
     try {
-      // Simulate authentication
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const user = {
-        id: "1",
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: formData.email,
-        firstName: "John",
-        lastName: "Doe",
-        role: "user"
-      };
+        password: formData.password,
+      });
       
-      onAuthSuccess(user);
-      toast({
-        title: "Welcome back!",
-        description: "You have successfully signed in.",
-      });
-    } catch (error) {
-      toast({
-        title: "Authentication failed",
-        description: "Please check your credentials and try again.",
-        variant: "destructive",
-      });
+      if (error) {
+        throw error;
+      }
+      
+      if (data.user) {
+        onAuthSuccess(data.user);
+        toast("Welcome back! You have successfully signed in.");
+      }
+    } catch (error: any) {
+      toast(`Authentication failed: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -66,28 +59,28 @@ export const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
     setIsLoading(true);
     
     try {
-      // Simulate registration
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const user = {
-        id: "1",
+      const { data, error } = await supabase.auth.signUp({
         email: formData.email,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        role: "user"
-      };
+        password: formData.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+          }
+        }
+      });
       
-      onAuthSuccess(user);
-      toast({
-        title: "Account created!",
-        description: "Welcome to MediScan. Your account has been created successfully.",
-      });
-    } catch (error) {
-      toast({
-        title: "Registration failed",
-        description: "Please try again with different details.",
-        variant: "destructive",
-      });
+      if (error) {
+        throw error;
+      }
+      
+      if (data.user) {
+        onAuthSuccess(data.user);
+        toast("Account created! Welcome to MediScan.");
+      }
+    } catch (error: any) {
+      toast(`Registration failed: ${error.message}`);
     } finally {
       setIsLoading(false);
     }

@@ -14,7 +14,150 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      medicine_scans: {
+        Row: {
+          active_ingredients: string | null
+          confidence_score: number | null
+          created_at: string
+          dosage: string | null
+          generic_name: string | null
+          id: string
+          image_url: string | null
+          manufacturer: string | null
+          medicine_name: string | null
+          precautions: string | null
+          side_effects: string | null
+          user_id: string
+          uses: string | null
+        }
+        Insert: {
+          active_ingredients?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          dosage?: string | null
+          generic_name?: string | null
+          id?: string
+          image_url?: string | null
+          manufacturer?: string | null
+          medicine_name?: string | null
+          precautions?: string | null
+          side_effects?: string | null
+          user_id: string
+          uses?: string | null
+        }
+        Update: {
+          active_ingredients?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          dosage?: string | null
+          generic_name?: string | null
+          id?: string
+          image_url?: string | null
+          manufacturer?: string | null
+          medicine_name?: string | null
+          precautions?: string | null
+          side_effects?: string | null
+          user_id?: string
+          uses?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          allergies: string | null
+          created_at: string
+          current_medications: string | null
+          data_sharing_consent: boolean | null
+          date_of_birth: string | null
+          email: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          first_name: string | null
+          gender: string | null
+          id: string
+          last_name: string | null
+          medical_conditions: string | null
+          notification_preferences: boolean | null
+          phone: string | null
+          preferred_language: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          allergies?: string | null
+          created_at?: string
+          current_medications?: string | null
+          data_sharing_consent?: boolean | null
+          date_of_birth?: string | null
+          email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          first_name?: string | null
+          gender?: string | null
+          id?: string
+          last_name?: string | null
+          medical_conditions?: string | null
+          notification_preferences?: boolean | null
+          phone?: string | null
+          preferred_language?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          allergies?: string | null
+          created_at?: string
+          current_medications?: string | null
+          data_sharing_consent?: boolean | null
+          date_of_birth?: string | null
+          email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          first_name?: string | null
+          gender?: string | null
+          id?: string
+          last_name?: string | null
+          medical_conditions?: string | null
+          notification_preferences?: boolean | null
+          phone?: string | null
+          preferred_language?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      symptom_analyses: {
+        Row: {
+          additional_info: string | null
+          created_at: string
+          general_recommendations: string | null
+          id: string
+          possible_conditions: Json | null
+          symptoms: string[]
+          urgency_level: string | null
+          user_id: string
+        }
+        Insert: {
+          additional_info?: string | null
+          created_at?: string
+          general_recommendations?: string | null
+          id?: string
+          possible_conditions?: Json | null
+          symptoms: string[]
+          urgency_level?: string | null
+          user_id: string
+        }
+        Update: {
+          additional_info?: string | null
+          created_at?: string
+          general_recommendations?: string | null
+          id?: string
+          possible_conditions?: Json | null
+          symptoms?: string[]
+          urgency_level?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

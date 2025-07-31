@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,8 @@ import {
   Pill,
   Activity
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface HistoryItem {
   id: string;
@@ -26,72 +28,104 @@ interface HistoryItem {
   details: any;
 }
 
-export const UserHistory = () => {
-  const [selectedTab, setSelectedTab] = useState("all");
+interface UserHistoryProps {
+  user: any;
+}
 
-  // Mock history data
-  const historyItems: HistoryItem[] = [
-    {
-      id: "1",
-      type: "medicine",
-      title: "Paracetamol 500mg",
-      date: "2024-01-15T10:30:00",
-      confidence: 94,
-      status: "completed",
-      details: {
-        manufacturer: "PharmaCorp Ltd.",
-        uses: ["Pain relief", "Fever reduction"]
-      }
-    },
-    {
-      id: "2",
-      type: "symptom",
-      title: "Common Cold Analysis",
-      date: "2024-01-14T14:20:00",
-      status: "completed",
-      details: {
-        symptoms: ["headache", "runny nose", "cough"],
-        topCondition: "Common Cold (75% match)"
-      }
-    },
-    {
-      id: "3",
-      type: "medicine",
-      title: "Ibuprofen 400mg",
-      date: "2024-01-12T09:15:00",
-      confidence: 88,
-      status: "completed",
-      details: {
-        manufacturer: "MediPharm Inc.",
-        uses: ["Anti-inflammatory", "Pain relief"]
-      }
-    },
-    {
-      id: "4",
-      type: "symptom",
-      title: "Allergy Symptoms",
-      date: "2024-01-10T16:45:00",
-      status: "completed",
-      details: {
-        symptoms: ["sneezing", "watery eyes", "congestion"],
-        topCondition: "Seasonal Allergies (82% match)"
-      }
-    },
-    {
-      id: "5",
-      type: "medicine",
-      title: "Analysis Failed",
-      date: "2024-01-08T11:30:00",
-      status: "failed",
-      details: {
-        reason: "Image quality too low"
-      }
+export const UserHistory = ({ user }: UserHistoryProps) => {
+  const [selectedTab, setSelectedTab] = useState("all");
+  const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadHistory();
+  }, [user]);
+
+  const loadHistory = async () => {
+    try {
+      // Load medicine scans
+      const { data: medicineScans, error: medicineError } = await supabase
+        .from('medicine_scans')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (medicineError) throw medicineError;
+
+      // Load symptom analyses
+      const { data: symptomAnalyses, error: symptomError } = await supabase
+        .from('symptom_analyses')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (symptomError) throw symptomError;
+
+      // Convert to HistoryItem format
+      const medicineItems: HistoryItem[] = (medicineScans || []).map(scan => ({
+        id: scan.id,
+        type: 'medicine',
+        title: scan.medicine_name || 'Medicine Scan',
+        date: scan.created_at,
+        confidence: Math.round((scan.confidence_score || 0) * 100),
+        status: 'completed',
+        details: {
+          manufacturer: scan.manufacturer,
+          uses: scan.uses ? scan.uses.split(', ') : []
+        }
+      }));
+
+      const symptomItems: HistoryItem[] = (symptomAnalyses || []).map(analysis => ({
+        id: analysis.id,
+        type: 'symptom',
+        title: 'Symptom Analysis',
+        date: analysis.created_at,
+        status: 'completed',
+        details: {
+          symptoms: analysis.symptoms || [],
+          topCondition: analysis.possible_conditions?.[0]?.name || 'Unknown'
+        }
+      }));
+
+      const allItems = [...medicineItems, ...symptomItems]
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+      setHistoryItems(allItems);
+    } catch (error: any) {
+      toast(`Failed to load history: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  const deleteItem = async (id: string, type: 'medicine' | 'symptom') => {
+    try {
+      const table = type === 'medicine' ? 'medicine_scans' : 'symptom_analyses';
+      const { error } = await supabase
+        .from(table)
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setHistoryItems(prev => prev.filter(item => item.id !== id));
+      toast("Item deleted successfully");
+    } catch (error: any) {
+      toast(`Failed to delete item: ${error.message}`);
+    }
+  };
 
   const filteredItems = selectedTab === "all" 
     ? historyItems 
     : historyItems.filter(item => item.type === selectedTab);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);

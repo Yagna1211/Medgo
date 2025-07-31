@@ -16,7 +16,8 @@ import {
   Zap,
   Shield
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MedicineInfo {
   name: string;
@@ -30,12 +31,15 @@ interface MedicineInfo {
   confidence: number;
 }
 
-export const MedicineScanner = () => {
+interface MedicineScannerProps {
+  user: any;
+}
+
+export const MedicineScanner = ({ user }: MedicineScannerProps) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [medicineInfo, setMedicineInfo] = useState<MedicineInfo | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast();
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -85,17 +89,31 @@ export const MedicineScanner = () => {
         confidence: 94
       };
 
+      // Store scan in database
+      const { error } = await supabase
+        .from('medicine_scans')
+        .insert({
+          user_id: user.id,
+          image_url: uploadedImage || '',
+          medicine_name: mockData.name,
+          generic_name: mockData.genericName,
+          manufacturer: mockData.manufacturer,
+          confidence_score: mockData.confidence,
+          uses: mockData.uses.join(', '),
+          dosage: mockData.dosage,
+          side_effects: mockData.sideEffects.join(', '),
+          precautions: mockData.precautions.join(', '),
+          active_ingredients: mockData.activeIngredients.join(', ')
+        });
+
+      if (error) {
+        throw error;
+      }
+
       setMedicineInfo(mockData);
-      toast({
-        title: "Analysis Complete!",
-        description: `Medicine identified with ${mockData.confidence}% confidence`,
-      });
-    } catch (error) {
-      toast({
-        title: "Analysis Failed",
-        description: "Unable to identify the medicine. Please try with a clearer image.",
-        variant: "destructive",
-      });
+      toast("Analysis Complete! Medicine identified and saved to your history.");
+    } catch (error: any) {
+      toast(`Analysis failed: ${error.message}`);
     } finally {
       setIsAnalyzing(false);
     }
