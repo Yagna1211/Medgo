@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ import {
   Edit3
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface UserProfileProps {
   user: any;
@@ -27,15 +28,19 @@ interface UserProfileProps {
 
 export const UserProfile = ({ user }: UserProfileProps) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [profileData, setProfileData] = useState({
-    firstName: user.firstName || "John",
-    lastName: user.lastName || "Doe",
-    email: user.email || "john.doe@example.com",
-    phone: "+1 (555) 123-4567",
-    dateOfBirth: "1990-05-15",
-    address: "123 Medical Street, Health City, HC 12345",
-    emergencyContact: "Jane Doe - +1 (555) 987-6543",
-    medicalHistory: "No known allergies. Previous surgery: Appendectomy (2018)",
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    dateOfBirth: "",
+    address: "",
+    emergencyContact: "",
+    medicalHistory: "",
+    allergies: "",
+    currentMedications: "",
+    medicalConditions: "",
     preferences: {
       emailNotifications: true,
       smsNotifications: false,
@@ -44,6 +49,65 @@ export const UserProfile = ({ user }: UserProfileProps) => {
     }
   });
   const { toast } = useToast();
+
+  useEffect(() => {
+    fetchProfile();
+  }, [user]);
+
+  const fetchProfile = async () => {
+    try {
+      setLoading(true);
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+
+      if (profile) {
+        setProfileData({
+          firstName: profile.first_name || "",
+          lastName: profile.last_name || "",
+          email: profile.email || user.email || "",
+          phone: profile.phone || "",
+          dateOfBirth: profile.date_of_birth || "",
+          address: "",
+          emergencyContact: profile.emergency_contact_name && profile.emergency_contact_phone 
+            ? `${profile.emergency_contact_name} - ${profile.emergency_contact_phone}`
+            : "",
+          medicalHistory: "",
+          allergies: profile.allergies || "",
+          currentMedications: profile.current_medications || "",
+          medicalConditions: profile.medical_conditions || "",
+          preferences: {
+            emailNotifications: profile.notification_preferences ?? true,
+            smsNotifications: false,
+            reminderNotifications: true,
+            dataSharing: profile.data_sharing_consent ?? false
+          }
+        });
+      } else {
+        // Set default values with user data
+        setProfileData(prev => ({
+          ...prev,
+          firstName: user.user_metadata?.first_name || "",
+          lastName: user.user_metadata?.last_name || "",
+          email: user.email || ""
+        }));
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error loading profile",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleInputChange = (field: string, value: string) => {
     setProfileData(prev => ({
@@ -62,15 +126,42 @@ export const UserProfile = ({ user }: UserProfileProps) => {
     }));
   };
 
-  const handleSave = () => {
-    // Simulate save operation
-    setTimeout(() => {
+  const handleSave = async () => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          user_id: user.id,
+          first_name: profileData.firstName,
+          last_name: profileData.lastName,
+          email: profileData.email,
+          phone: profileData.phone,
+          date_of_birth: profileData.dateOfBirth || null,
+          allergies: profileData.allergies,
+          current_medications: profileData.currentMedications,
+          medical_conditions: profileData.medicalConditions,
+          notification_preferences: profileData.preferences.emailNotifications,
+          data_sharing_consent: profileData.preferences.dataSharing,
+          emergency_contact_name: profileData.emergencyContact.split(' - ')[0] || null,
+          emergency_contact_phone: profileData.emergencyContact.split(' - ')[1] || null,
+        }, {
+          onConflict: 'user_id'
+        });
+
+      if (error) throw error;
+
       toast({
         title: "Profile Updated",
         description: "Your profile has been successfully updated.",
       });
       setIsEditing(false);
-    }, 500);
+    } catch (error: any) {
+      toast({
+        title: "Error saving profile",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
   };
 
   const accountStats = [
@@ -79,6 +170,14 @@ export const UserProfile = ({ user }: UserProfileProps) => {
     { label: "Account Status", value: "Active", icon: Shield },
     { label: "Last Activity", value: "Today", icon: User }
   ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -237,13 +336,38 @@ export const UserProfile = ({ user }: UserProfileProps) => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="medicalHistory">Medical History</Label>
+              <Label htmlFor="allergies">Allergies</Label>
               <Textarea
-                id="medicalHistory"
-                value={profileData.medicalHistory}
-                onChange={(e) => handleInputChange("medicalHistory", e.target.value)}
+                id="allergies"
+                value={profileData.allergies}
+                onChange={(e) => handleInputChange("allergies", e.target.value)}
                 disabled={!isEditing}
-                rows={3}
+                rows={2}
+                placeholder="Enter any known allergies..."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="currentMedications">Current Medications</Label>
+              <Textarea
+                id="currentMedications"
+                value={profileData.currentMedications}
+                onChange={(e) => handleInputChange("currentMedications", e.target.value)}
+                disabled={!isEditing}
+                rows={2}
+                placeholder="List current medications..."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="medicalConditions">Medical Conditions</Label>
+              <Textarea
+                id="medicalConditions"
+                value={profileData.medicalConditions}
+                onChange={(e) => handleInputChange("medicalConditions", e.target.value)}
+                disabled={!isEditing}
+                rows={2}
+                placeholder="List any medical conditions..."
               />
             </div>
 

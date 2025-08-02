@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useTheme } from "next-themes";
 import { 
   Stethoscope, 
   Upload, 
@@ -13,7 +14,9 @@ import {
   Camera,
   FileText,
   Activity,
-  Shield
+  Shield,
+  Sun,
+  Moon
 } from "lucide-react";
 import { MedicineScanner } from "./MedicineScanner";
 import { SymptomAnalyzer } from "./SymptomAnalyzer";
@@ -30,6 +33,7 @@ interface DashboardProps {
 
 export const Dashboard = ({ user, onLogout }: DashboardProps) => {
   const [activeTab, setActiveTab] = useState("home");
+  const { theme, setTheme } = useTheme();
 
   const features = [
     {
@@ -84,9 +88,20 @@ export const Dashboard = ({ user, onLogout }: DashboardProps) => {
             
             <div className="flex items-center space-x-4">
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-medium">Welcome, {user.firstName}</p>
+                <p className="text-sm font-medium">Welcome, {user.user_metadata?.first_name || user.email?.split('@')[0]}</p>
                 <p className="text-xs text-muted-foreground">{user.email}</p>
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              >
+                {theme === "dark" ? (
+                  <Sun className="h-4 w-4" />
+                ) : (
+                  <Moon className="h-4 w-4" />
+                )}
+              </Button>
               <Button variant="outline" size="sm" onClick={onLogout}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout
