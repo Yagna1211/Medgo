@@ -58,59 +58,40 @@ export const MedicineScanner = ({ user }: MedicineScannerProps) => {
     setMedicineInfo(null);
 
     try {
-      // Simulate AI analysis
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Convert image to base64
+      const reader = new FileReader();
+      const imageBase64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
 
-      // Mock medicine data
-      const mockData: MedicineInfo = {
-        name: "Paracetamol 500mg",
-        genericName: "Acetaminophen",
-        manufacturer: "PharmaCorp Ltd.",
-        uses: [
-          "Pain relief (headache, muscle pain, back pain)",
-          "Fever reduction",
-          "Cold and flu symptoms",
-          "Dental pain relief"
-        ],
-        dosage: "Adults: 1-2 tablets every 4-6 hours. Maximum 8 tablets in 24 hours. Children: Consult pediatrician.",
-        sideEffects: [
-          "Rare: Skin rash or allergic reaction",
-          "Overdose: Liver damage",
-          "Nausea (uncommon)",
-          "Stomach upset (rare)"
-        ],
-        precautions: [
-          "Do not exceed recommended dose",
-          "Avoid alcohol while taking this medication",
-          "Consult doctor if pregnant or breastfeeding",
-          "Check other medications for paracetamol content"
-        ],
-        activeIngredients: ["Paracetamol 500mg"],
-        confidence: 94
-      };
-
-      // Store scan in database
-      const { error } = await supabase
-        .from('medicine_scans')
-        .insert({
-          user_id: user.id,
-          image_url: uploadedImage || '',
-          medicine_name: mockData.name,
-          generic_name: mockData.genericName,
-          manufacturer: mockData.manufacturer,
-          confidence_score: mockData.confidence,
-          uses: mockData.uses.join(', '),
-          dosage: mockData.dosage,
-          side_effects: mockData.sideEffects.join(', '),
-          precautions: mockData.precautions.join(', '),
-          active_ingredients: mockData.activeIngredients.join(', ')
-        });
+      // Call the AI analysis edge function
+      const { data, error } = await supabase.functions.invoke('analyze-medicine', {
+        body: {
+          imageBase64,
+          userId: user.id
+        }
+      });
 
       if (error) {
-        throw error;
+        throw new Error(error.message || 'Failed to analyze medicine');
       }
 
-      setMedicineInfo(mockData);
+      // Transform the API response to match our interface
+      const transformedData: MedicineInfo = {
+        name: data.medicine_name || 'Unknown Medicine',
+        genericName: data.generic_name || 'N/A',
+        manufacturer: data.manufacturer || 'N/A',
+        uses: data.uses ? data.uses.split(', ') : [],
+        dosage: data.dosage || 'Consult healthcare provider',
+        sideEffects: data.side_effects ? data.side_effects.split(', ') : [],
+        precautions: data.precautions ? data.precautions.split(', ') : [],
+        activeIngredients: data.active_ingredients ? data.active_ingredients.split(', ') : [],
+        confidence: Math.round((data.confidence_score || 0) * 100)
+      };
+
+      setMedicineInfo(transformedData);
       toast("Analysis Complete! Medicine identified and saved to your history.");
     } catch (error: any) {
       toast(`Analysis failed: ${error.message}`);

@@ -66,76 +66,34 @@ export const SymptomAnalyzer = ({ user }: SymptomAnalyzerProps) => {
     setAnalysis(null);
 
     try {
-      // Simulate AI analysis
-      await new Promise(resolve => setTimeout(resolve, 2500));
-
-      // Mock analysis data
-      const mockAnalysis: SymptomAnalysis = {
-        conditions: [
-          {
-            name: "Common Cold",
-            probability: 75,
-            description: "A viral infection of the upper respiratory tract, typically mild and self-limiting.",
-            severity: 'low',
-            recommendations: [
-              "Rest and stay hydrated",
-              "Use over-the-counter pain relievers",
-              "Gargle with warm salt water",
-              "Consider throat lozenges"
-            ]
-          },
-          {
-            name: "Seasonal Allergies",
-            probability: 45,
-            description: "Allergic reaction to airborne substances like pollen, dust, or pet dander.",
-            severity: 'low',
-            recommendations: [
-              "Avoid known allergens",
-              "Use antihistamines",
-              "Keep windows closed during high pollen days",
-              "Consider nasal rinses"
-            ]
-          },
-          {
-            name: "Viral Upper Respiratory Infection",
-            probability: 35,
-            description: "Infection affecting the nose, throat, and upper airways.",
-            severity: 'medium',
-            recommendations: [
-              "Monitor symptoms closely",
-              "Increase fluid intake",
-              "Use humidifier",
-              "Consult doctor if symptoms worsen"
-            ]
-          }
-        ],
-        urgency: 'low',
-        generalRecommendations: [
-          "Monitor symptoms for 3-5 days",
-          "Seek medical attention if symptoms worsen",
-          "Maintain good hygiene to prevent spread",
-          "Get adequate rest and nutrition"
-        ]
-      };
-
-      // Store analysis in database
-      const { error } = await supabase
-        .from('symptom_analyses')
-        .insert({
-          user_id: user.id,
-          symptoms: symptoms,
-          additional_info: additionalInfo,
-          urgency_level: mockAnalysis.urgency,
-          possible_conditions: mockAnalysis.conditions,
-          general_recommendations: mockAnalysis.generalRecommendations.join(', ')
-        });
+      // Call the AI analysis edge function
+      const { data, error } = await supabase.functions.invoke('analyze-symptoms', {
+        body: {
+          symptoms,
+          additionalInfo,
+          userId: user.id
+        }
+      });
 
       if (error) {
-        throw error;
+        throw new Error(error.message || 'Failed to analyze symptoms');
       }
 
-      setAnalysis(mockAnalysis);
-      toast(`Analysis Complete! Found ${mockAnalysis.conditions.length} possible conditions and saved to your history.`);
+      // Transform the API response to match our interface
+      const transformedAnalysis: SymptomAnalysis = {
+        conditions: data.conditions.map((condition: any) => ({
+          name: condition.name,
+          probability: parseInt(condition.probability.replace(/[^\d]/g, '')) || 50,
+          description: condition.description,
+          severity: condition.severity as 'low' | 'medium' | 'high',
+          recommendations: condition.recommendations
+        })),
+        urgency: data.urgency.toLowerCase() as 'low' | 'medium' | 'high' | 'emergency',
+        generalRecommendations: data.generalRecommendations
+      };
+
+      setAnalysis(transformedAnalysis);
+      toast(`Analysis Complete! Found ${transformedAnalysis.conditions.length} possible conditions and saved to your history.`);
     } catch (error: any) {
       toast(`Analysis failed: ${error.message}`);
     } finally {
