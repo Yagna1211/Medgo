@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      ambulance_bookings: {
+        Row: {
+          ambulance_id: string
+          created_at: string
+          description: string | null
+          driver_name: string
+          driver_phone: string
+          emergency_type: string
+          estimated_arrival: number
+          hospital: string
+          id: string
+          patient_name: string
+          patient_phone: string
+          pickup_address: string | null
+          pickup_location: unknown | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ambulance_id: string
+          created_at?: string
+          description?: string | null
+          driver_name: string
+          driver_phone: string
+          emergency_type: string
+          estimated_arrival: number
+          hospital: string
+          id?: string
+          patient_name: string
+          patient_phone: string
+          pickup_address?: string | null
+          pickup_location?: unknown | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ambulance_id?: string
+          created_at?: string
+          description?: string | null
+          driver_name?: string
+          driver_phone?: string
+          emergency_type?: string
+          estimated_arrival?: number
+          hospital?: string
+          id?: string
+          patient_name?: string
+          patient_phone?: string
+          pickup_address?: string | null
+          pickup_location?: unknown | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       medicine_scans: {
         Row: {
           active_ingredients: string | null
