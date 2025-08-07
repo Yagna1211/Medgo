@@ -62,7 +62,6 @@ export const SymptomAnalyzer = ({ user }: SymptomAnalyzerProps) => {
       return;
     }
 
-    console.log('Starting symptom analysis...', { symptoms, additionalInfo });
     setIsAnalyzing(true);
     setAnalysis(null);
 
@@ -75,8 +74,6 @@ export const SymptomAnalyzer = ({ user }: SymptomAnalyzerProps) => {
           userId: user.id
         }
       });
-
-      console.log('Edge function response:', { data, error });
 
       if (error) {
         throw new Error(error.message || 'Failed to analyze symptoms');

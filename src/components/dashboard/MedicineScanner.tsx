@@ -54,7 +54,6 @@ export const MedicineScanner = ({ user }: MedicineScannerProps) => {
   };
 
   const analyzeMedicine = async (file: File) => {
-    console.log('Starting medicine analysis...', { fileName: file.name, fileSize: file.size });
     setIsAnalyzing(true);
     setMedicineInfo(null);
 
@@ -67,8 +66,6 @@ export const MedicineScanner = ({ user }: MedicineScannerProps) => {
         reader.readAsDataURL(file);
       });
 
-      console.log('Image converted to base64, calling edge function...');
-
       // Call the AI analysis edge function
       const { data, error } = await supabase.functions.invoke('analyze-medicine', {
         body: {
@@ -76,8 +73,6 @@ export const MedicineScanner = ({ user }: MedicineScannerProps) => {
           userId: user.id
         }
       });
-
-      console.log('Edge function response:', { data, error });
 
       if (error) {
         throw new Error(error.message || 'Failed to analyze medicine');
