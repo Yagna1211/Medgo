@@ -14,7 +14,8 @@ import {
   Pill,
   Clock,
   Zap,
-  Shield
+  Shield,
+  Search
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,6 +39,7 @@ interface MedicineScannerProps {
 export const MedicineScanner = ({ user }: MedicineScannerProps) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [medicineInfo, setMedicineInfo] = useState<MedicineInfo | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -47,10 +49,22 @@ export const MedicineScanner = ({ user }: MedicineScannerProps) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         setUploadedImage(e.target?.result as string);
-        analyzeMedicine(file);
+        // Store the file for later analysis
+        setSelectedFile(file);
+        // Reset previous results
+        setMedicineInfo(null);
       };
       reader.readAsDataURL(file);
     }
+  };
+
+
+  const startAnalysis = async () => {
+    if (!selectedFile) {
+      toast("Please upload an image first.");
+      return;
+    }
+    await analyzeMedicine(selectedFile);
   };
 
   const analyzeMedicine = async (file: File) => {
@@ -147,9 +161,28 @@ export const MedicineScanner = ({ user }: MedicineScannerProps) => {
                     alt="Uploaded medicine" 
                     className="max-h-48 mx-auto rounded-lg shadow-md"
                   />
-                  <Button variant="outline" size="sm">
-                    Upload Different Image
-                  </Button>
+                  <div className="flex gap-2 justify-center">
+                    <Button 
+                      onClick={startAnalysis}
+                      disabled={isAnalyzing}
+                      className="flex items-center gap-2"
+                    >
+                      {isAnalyzing ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Analyzing...
+                        </>
+                      ) : (
+                        <>
+                          <Search className="h-4 w-4" />
+                          Analyse Medicine
+                        </>
+                      )}
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={triggerFileInput}>
+                      Upload Different Image
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -168,7 +201,7 @@ export const MedicineScanner = ({ user }: MedicineScannerProps) => {
               )}
             </div>
 
-            {isAnalyzing && (
+            {isAnalyzing && uploadedImage && (
               <Alert>
                 <Loader2 className="h-4 w-4 animate-spin" />
                 <AlertDescription>
