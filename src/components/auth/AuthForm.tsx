@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Stethoscope, Eye, EyeOff, Mail, Lock, User } from "lucide-react";
+import { Stethoscope, Eye, EyeOff, Mail, Lock, User, Users, PhoneCall, Bell, MapPin, Navigation } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -250,6 +250,72 @@ export const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* How it works Section */}
+      <section aria-labelledby="how-it-works" className="mt-8 w-full max-w-3xl bg-background/60 supports-[backdrop-filter]:bg-background/60 backdrop-blur rounded-xl border border-primary/10 p-6 shadow-[var(--shadow-card)]">
+        <header className="mb-4">
+          <h1 id="how-it-works" className="text-2xl font-bold text-foreground">
+            Rapido-style ambulance dispatch: how it works
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            Separate logins for Users and Ambulance Drivers enable rapid emergency response and real-time navigation.
+          </p>
+        </header>
+
+        <div className="space-y-6">
+          <article className="flex gap-4">
+            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+              <Users className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="font-semibold">Two login systems</h3>
+              <p className="text-sm text-muted-foreground">
+                Users log in to request help; ambulance drivers log in to receive jobs and manage availability.
+              </p>
+            </div>
+          </article>
+
+          <article className="flex gap-4">
+            <div className="h-10 w-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
+              <PhoneCall className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="font-semibold">Voice trigger: “Call ambulance”</h3>
+              <p className="text-sm text-muted-foreground">
+                Saying or tapping “Call ambulance” broadcasts a real-time alert to nearby drivers within the GPS range.
+              </p>
+            </div>
+          </article>
+
+          <article className="flex gap-4">
+            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+              <Bell className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="font-semibold">Driver alerts with precise location</h3>
+              <p className="text-sm text-muted-foreground">
+                Drivers receive the user’s location <span className="inline-flex items-center gap-1"><MapPin className="h-4 w-4" />GPS</span> and can open Google Maps <span className="inline-flex items-center gap-1"><Navigation className="h-4 w-4" />Directions</span> for immediate response.
+              </p>
+            </div>
+          </article>
+
+          <article className="flex gap-4">
+            <div className="h-10 w-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
+              <Navigation className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="font-semibold">Rapido-like dispatch logic</h3>
+              <p className="text-sm text-muted-foreground">
+                Requests route to available, nearby drivers first to minimize ETA and ensure fast assistance.
+              </p>
+            </div>
+          </article>
+        </div>
+
+        <aside className="mt-6 rounded-lg bg-primary/5 border border-primary/10 p-4 text-sm text-muted-foreground">
+          This explains the intended workflow. Driver app, voice detection, realtime dispatch, and Google Maps integration are part of the full platform setup.
+        </aside>
+      </section>
     </div>
   );
 };
