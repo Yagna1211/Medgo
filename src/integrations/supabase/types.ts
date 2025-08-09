@@ -71,6 +71,66 @@ export type Database = {
         }
         Relationships: []
       }
+      ambulance_notifications: {
+        Row: {
+          created_at: string
+          description: string | null
+          distance_km: number | null
+          driver_id: string
+          emergency_type: string
+          id: string
+          pickup_address: string | null
+          pickup_location: unknown
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          distance_km?: number | null
+          driver_id: string
+          emergency_type: string
+          id?: string
+          pickup_address?: string | null
+          pickup_location: unknown
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          distance_km?: number | null
+          driver_id?: string
+          emergency_type?: string
+          id?: string
+          pickup_address?: string | null
+          pickup_location?: unknown
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      driver_status: {
+        Row: {
+          available: boolean
+          location: unknown | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          available?: boolean
+          location?: unknown | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          available?: boolean
+          location?: unknown | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       medicine_scans: {
         Row: {
           active_ingredients: string | null
