@@ -16,12 +16,14 @@ import {
   Activity,
   Shield,
   Sun,
-  Moon
+  Moon,
+  Ambulance
 } from "lucide-react";
 import { MedicineScanner } from "./MedicineScanner";
 import { SymptomAnalyzer } from "./SymptomAnalyzer";
 import { UserHistory } from "./UserHistory";
 import { UserProfile } from "./UserProfile";
+import { EmergencyAmbulance } from "./EmergencyAmbulance";
 import heroImage from "@/assets/hero-medical.jpg";
 import medicineIcon from "@/assets/medicine-icon.jpg";
 import symptomIcon from "@/assets/symptom-icon.jpg";
@@ -51,6 +53,13 @@ export const Dashboard = ({ user, onLogout }: DashboardProps) => {
       image: symptomIcon,
       action: () => setActiveTab("symptoms"),
       color: "from-green-500 to-teal-500"
+    },
+    {
+      title: "Ambulance Booking",
+      description: "Book a nearby ambulance instantly",
+      icon: Ambulance,
+      action: () => setActiveTab("ambulance"),
+      color: "from-red-500 to-orange-500"
     },
     {
       title: "Health History",
@@ -126,6 +135,10 @@ export const Dashboard = ({ user, onLogout }: DashboardProps) => {
               <Search className="h-4 w-4 mr-2" />
               Symptoms
             </TabsTrigger>
+            <TabsTrigger value="ambulance" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Ambulance className="h-4 w-4 mr-2" />
+              Ambulance
+            </TabsTrigger>
             <TabsTrigger value="history" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <History className="h-4 w-4 mr-2" />
               History
@@ -166,7 +179,7 @@ export const Dashboard = ({ user, onLogout }: DashboardProps) => {
             </div>
 
             {/* Features Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
               {features.map((feature, index) => (
                 <Card 
                   key={index} 
@@ -244,6 +257,10 @@ export const Dashboard = ({ user, onLogout }: DashboardProps) => {
 
           <TabsContent value="symptoms">
             <SymptomAnalyzer user={user} />
+          </TabsContent>
+
+          <TabsContent value="ambulance">
+            <EmergencyAmbulance user={user} />
           </TabsContent>
 
           <TabsContent value="history">
