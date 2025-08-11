@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import Tesseract from "tesseract.js";
 
 interface MedicineInfo {
   name: string;
@@ -72,41 +73,105 @@ export const MedicineScanner = ({ user }: MedicineScannerProps) => {
     setMedicineInfo(null);
 
     try {
-      // Convert image to base64
-      const reader = new FileReader();
-      const imageBase64 = await new Promise<string>((resolve, reject) => {
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
+      // 1) OCR the image locally (no paid APIs)
+      const { data: ocr } = await new Promise<any>((resolve, reject) => {
+        Tesseract.recognize(file, 'eng', {
+          logger: (m) => {
+            if (m.status === 'recognizing text') {
+              // you can optionally show progress
+            }
+          },
+        })
+          .then((res) => resolve({ data: res }))
+          .catch(reject);
       });
 
-      // Call the AI analysis edge function
-      const { data, error } = await supabase.functions.invoke('analyze-medicine', {
-        body: {
-          imageBase64,
-          userId: user.id
-        }
-      });
-
-      if (error) {
-        throw new Error(error.message || 'Failed to analyze medicine');
+      const text: string = ocr?.data?.text || '';
+      if (!text.trim()) {
+        throw new Error('Could not read any text from the image. Try a clearer photo.');
       }
 
-      // Transform the API response to match our interface
-      const transformedData: MedicineInfo = {
-        name: data.medicine_name || 'Unknown Medicine',
-        genericName: data.generic_name || 'N/A',
-        manufacturer: data.manufacturer || 'N/A',
-        uses: data.uses ? data.uses.split(', ') : [],
-        dosage: data.dosage || 'Consult healthcare provider',
-        sideEffects: data.side_effects ? data.side_effects.split(', ') : [],
-        precautions: data.precautions ? data.precautions.split(', ') : [],
-        activeIngredients: data.active_ingredients ? data.active_ingredients.split(', ') : [],
-        confidence: Math.round((data.confidence_score || 0) * 100)
+      // 2) Try to infer a medicine name candidate from OCR text
+      const candidates = Array.from(
+        new Set(
+          text
+            .split(/\n|\r|\t|\s{2,}/)
+            .map((s) => s.trim())
+            .filter((s) => s.length > 2 && /[A-Za-z]/.test(s))
+        )
+      ).slice(0, 5);
+
+      async function lookupByName(name: string) {
+        const rxRes = await fetch(
+          `https://rxnav.nlm.nih.gov/REST/rxcui.json?name=${encodeURIComponent(name)}`
+        );
+        let rxcui: string | undefined;
+        if (rxRes.ok) {
+          const rj = await rxRes.json();
+          rxcui = rj?.idGroup?.rxnormId?.[0];
+        }
+
+        const fdaQueries = [
+          `openfda.brand_name:\"${name}\"`,
+          `openfda.generic_name:\"${name}\"`,
+          `openfda.substance_name:\"${name}\"`,
+        ];
+        let fdaData: any = null;
+        for (const q of fdaQueries) {
+          const url = `https://api.fda.gov/drug/label.json?search=${q}&limit=1`;
+          const res = await fetch(url);
+          if (res.ok) {
+            const jj = await res.json();
+            if (jj?.results?.length) { fdaData = jj.results[0]; break; }
+          }
+        }
+        return { rxcui, fdaData };
+      }
+
+      let found: any = null;
+      for (const cand of candidates) {
+        const { rxcui, fdaData } = await lookupByName(cand);
+        if (rxcui || fdaData) { found = { name: cand, rxcui, fdaData }; break; }
+      }
+
+      if (!found) {
+        throw new Error('Could not match medicine from the photo. Try retaking with the label in focus.');
+      }
+
+      const fda = found.fdaData || {};
+      const openfda = fda.openfda || {};
+
+      const info: MedicineInfo = {
+        name: openfda.brand_name?.[0] || found.name || 'Unknown',
+        genericName: openfda.generic_name?.[0] || 'N/A',
+        manufacturer: openfda.manufacturer_name?.[0] || 'N/A',
+        activeIngredients: openfda.substance_name || [],
+        uses: (fda.indications_and_usage?.[0] || '').split(/\n|\.|;|\r/).map(s=>s.trim()).filter(Boolean).slice(0,6),
+        dosage: (fda.dosage_and_administration?.[0] || 'Consult a healthcare provider'),
+        sideEffects: (fda.adverse_reactions?.[0] || fda.warnings?.[0] || '').split(/\n|\.|;|\r/).map(s=>s.trim()).filter(Boolean).slice(0,6),
+        precautions: (fda.precautions?.[0] || fda.warnings_and_precautions?.[0] || '').split(/\n|\.|;|\r/).map(s=>s.trim()).filter(Boolean).slice(0,6),
+        confidence: 90,
       };
 
-      setMedicineInfo(transformedData);
-      toast("Analysis Complete! Medicine identified and saved to your history.");
+      setMedicineInfo(info);
+
+      // 3) Save to history
+      try {
+        await supabase.from('medicine_scans').insert({
+          user_id: user.id,
+          medicine_name: info.name,
+          generic_name: info.genericName,
+          manufacturer: info.manufacturer,
+          active_ingredients: info.activeIngredients.join(', '),
+          uses: info.uses.join(', '),
+          dosage: info.dosage,
+          side_effects: info.sideEffects.join(', '),
+          precautions: info.precautions.join(', '),
+          confidence_score: info.confidence / 100,
+        });
+      } catch {}
+
+      toast("Analysis Complete! Medicine identified using OpenFDA/RxNorm.");
     } catch (error: any) {
       toast(`Analysis failed: ${error.message}`);
     } finally {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -17,9 +17,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useVoiceTrigger } from "@/hooks/use-voice-trigger";
-
-
-
+import { MapContainer, TileLayer, CircleMarker, Polyline, Popup } from "react-leaflet";
 interface EmergencyBookingProps {
   user: any;
 }
@@ -36,6 +34,8 @@ export const EmergencyAmbulance = ({ user }: EmergencyBookingProps) => {
   });
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const radiusKm = 5;
+  const [drivers, setDrivers] = useState<{ driver_id: string; lat: number; lng: number; distance_km: number }[]>([]);
+  const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
 
   const sendAlerts = async () => {
     if (!userLocation) {
@@ -77,6 +77,59 @@ export const EmergencyAmbulance = ({ user }: EmergencyBookingProps) => {
       sendAlerts();
     }
   });
+
+  const fetchNearby = async () => {
+    if (!userLocation) return;
+    try {
+      const { data, error } = await supabase.functions.invoke('nearby-ambulances', {
+        body: { lat: userLocation[1], lng: userLocation[0], radiusKm }
+      });
+      if (error) throw error;
+      setDrivers(data?.drivers ?? []);
+      toast(`Found ${data?.count ?? 0} nearby ambulances`);
+    } catch (e) {
+      console.error('nearby error', e);
+      toast('Failed to load nearby ambulances');
+    }
+  };
+
+  const drawRoute = async () => {
+    if (!userLocation) return;
+    if (!bookingDetails.pickupAddress) {
+      toast('Enter a pickup address first');
+      return;
+    }
+    try {
+      const geo = await supabase.functions.invoke('ors-proxy', {
+        body: { action: 'geocode', text: bookingDetails.pickupAddress }
+      });
+      const { lat, lng } = geo.data || {};
+      if (!lat || !lng) throw new Error('Geocoding failed');
+      const route = await supabase.functions.invoke('ors-proxy', {
+        body: { action: 'route', start: [userLocation[0], userLocation[1]], end: [lng, lat] }
+      });
+      const coords = (route.data?.coordinates || []).map((c: [number, number]) => [c[1], c[0]] as [number, number]);
+      setRouteCoords(coords);
+    } catch (e) {
+      console.error('route error', e);
+      toast('Failed to draw route');
+    }
+  };
+
+  const sendWhatsApp = async () => {
+    try {
+      const msg = `Emergency: ${bookingDetails.emergencyType}\nPatient: ${bookingDetails.patientName} (${bookingDetails.phoneNumber})\nLocation: ${userLocation?.[1]}, ${userLocation?.[0]}\nAddress: ${bookingDetails.pickupAddress}\nNotes: ${bookingDetails.description}`;
+      const { error } = await supabase.functions.invoke('send-callmebot', { body: { text: msg } });
+      if (error) throw error;
+      toast('WhatsApp alert sent');
+    } catch (e: any) {
+      if (e?.message?.includes('CALLMEBOT')) {
+        toast('WhatsApp not configured. Add CALLMEBOT_API_KEY and CALLMEBOT_PHONE in Supabase secrets.');
+      } else {
+        toast('Failed to send WhatsApp alert');
+      }
+    }
+  };
 
 
 const getCurrentLocation = () => {
@@ -189,6 +242,8 @@ const getCurrentLocation = () => {
             ) : (
               <Button variant="secondary" onClick={stop}>Stop voice</Button>
             )}
+            <Button variant="outline" onClick={fetchNearby}>Show nearby</Button>
+            <Button variant="outline" onClick={drawRoute}>Draw route</Button>
             <Button onClick={sendAlerts} disabled={isBooking}>
               {isBooking ? (
                 <>
@@ -201,6 +256,27 @@ const getCurrentLocation = () => {
             </Button>
           </div>
         </div>
+
+        <div className="h-64 w-full rounded-md overflow-hidden">
+          <MapContainer center={[userLocation[1], userLocation[0]]} zoom={14} className="h-full w-full">
+            <TileLayer
+              attribution="&copy; OpenStreetMap contributors"
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <CircleMarker center={[userLocation[1], userLocation[0]]} radius={10} pathOptions={{ color: '#2563eb' }}>
+              <Popup>You are here</Popup>
+            </CircleMarker>
+            {drivers.map((d) => (
+              <CircleMarker key={d.driver_id} center={[d.lat, d.lng]} radius={8} pathOptions={{ color: '#ef4444' }}>
+                <Popup>Ambulance • {d.distance_km.toFixed(1)} km away</Popup>
+              </CircleMarker>
+            ))}
+            {routeCoords.length > 0 && (
+              <Polyline positions={routeCoords} pathOptions={{ color: '#16a34a' }} />
+            )}
+          </MapContainer>
+        </div>
+
         <a
           href={`https://www.google.com/maps/dir/?api=1&destination=${userLocation[1]},${userLocation[0]}`}
           target="_blank" rel="noopener noreferrer"
@@ -208,6 +284,9 @@ const getCurrentLocation = () => {
         >
           Open destination in Google Maps
         </a>
+        <div>
+          <Button variant="outline" onClick={sendWhatsApp}>Send WhatsApp alert (optional)</Button>
+        </div>
       </div>
     )}
   </CardContent>
