@@ -69,11 +69,13 @@ export const EmergencyAmbulance = ({ user }: EmergencyBookingProps) => {
   };
 
   const { listening, start, stop } = useVoiceTrigger({
+    phrase: /(\bcall (an )?ambulance\b)/i,
     onTrigger: () => {
       if (!userLocation) {
-        toast("Voice detected: get location first");
+        toast("Voice detected: Please get your location first");
         return;
       }
+      toast("Voice command detected: Calling ambulance...");
       sendAlerts();
     }
   });
@@ -171,30 +173,6 @@ const getCurrentLocation = () => {
         </p>
       </div>
 
-      {/* Emergency Call Button */}
-      <Card className="border-red-200 bg-red-50">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="h-12 w-12 bg-red-500 rounded-full flex items-center justify-center">
-                <Phone className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h3 className="font-bold text-red-800">Medical Emergency?</h3>
-                <p className="text-sm text-red-600">Call 108 for immediate assistance</p>
-              </div>
-            </div>
-            <Button 
-              onClick={callEmergency}
-              className="bg-red-500 hover:bg-red-600 text-white"
-              size="lg"
-            >
-              <Phone className="h-4 w-4 mr-2" />
-              Call 108
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Map Section */}
@@ -231,27 +209,53 @@ const getCurrentLocation = () => {
       </div>
     ) : (
       <div className="space-y-4">
-        <div className="rounded-lg border p-4 flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
-            Location detected:
-            <div className="font-medium text-foreground">Lat {userLocation[1].toFixed(5)}, Lng {userLocation[0].toFixed(5)}</div>
+        <div className="rounded-lg border p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              Location detected:
+              <div className="font-medium text-foreground">Lat {userLocation[1].toFixed(5)}, Lng {userLocation[0].toFixed(5)}</div>
+            </div>
+            <div className="flex items-center gap-2">
+              {!listening ? (
+                <Button variant="outline" size="sm" onClick={start}>
+                  <Navigation className="h-4 w-4 mr-2" />
+                  Enable Voice: "Call Ambulance"
+                </Button>
+              ) : (
+                <Button variant="secondary" size="sm" onClick={stop}>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                    Voice Listening...
+                  </div>
+                </Button>
+              )}
+            </div>
           </div>
-          <div className="flex gap-2">
-            {!listening ? (
-              <Button variant="outline" onClick={start}>Enable voice trigger</Button>
-            ) : (
-              <Button variant="secondary" onClick={stop}>Stop voice</Button>
-            )}
-            <Button variant="outline" onClick={fetchNearby}>Show nearby</Button>
-            <Button variant="outline" onClick={drawRoute}>Draw route</Button>
-            <Button onClick={sendAlerts} disabled={isBooking}>
+          
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={fetchNearby}>
+              <MapPin className="h-4 w-4 mr-2" />
+              Show nearby
+            </Button>
+            <Button variant="outline" size="sm" onClick={drawRoute}>
+              <Navigation className="h-4 w-4 mr-2" />
+              Draw route
+            </Button>
+            <Button variant="outline" size="sm" onClick={sendWhatsApp}>
+              <Phone className="h-4 w-4 mr-2" />
+              WhatsApp alert
+            </Button>
+            <Button onClick={sendAlerts} disabled={isBooking} className="bg-red-500 hover:bg-red-600 text-white">
               {isBooking ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Sending...
                 </>
               ) : (
-                <>Send alerts</>
+                <>
+                  <Ambulance className="h-4 w-4 mr-2" />
+                  Send Emergency Alert
+                </>
               )}
             </Button>
           </div>
@@ -260,10 +264,9 @@ const getCurrentLocation = () => {
         <div className="h-64 w-full rounded-md overflow-hidden">
           <MapContainer center={[userLocation[1], userLocation[0]]} zoom={14} className="h-full w-full">
             <TileLayer
-              attribution="&copy; OpenStreetMap contributors"
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            <CircleMarker center={[userLocation[1], userLocation[0]]} radius={10} pathOptions={{ color: '#2563eb' }}>
+            <CircleMarker center={[userLocation[1], userLocation[0]]} radius={10}>
               <Popup>You are here</Popup>
             </CircleMarker>
             {drivers.map((d) => (
