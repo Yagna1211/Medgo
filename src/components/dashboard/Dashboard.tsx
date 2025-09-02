@@ -31,11 +31,19 @@ import symptomIcon from "@/assets/symptom-icon.jpg";
 interface DashboardProps {
   user: any;
   onLogout: () => void;
+  initialView?: string;
 }
 
-export const Dashboard = ({ user, onLogout }: DashboardProps) => {
-  const [activeTab, setActiveTab] = useState("home");
+export const Dashboard = ({ user, onLogout, initialView }: DashboardProps) => {
+  const [activeTab, setActiveTab] = useState(initialView || "home");
   const { theme, setTheme } = useTheme();
+
+  // Switch to initial view when provided
+  useEffect(() => {
+    if (initialView) {
+      setActiveTab(initialView);
+    }
+  }, [initialView]);
 
   // SEO: page title, meta description, canonical
   useEffect(() => {
