@@ -73,9 +73,15 @@ export const MedicineScanner = ({ user }: MedicineScannerProps) => {
     setMedicineInfo(null);
 
     try {
-      // 1) OCR the image locally (no paid APIs)
+      // 1) OCR the image locally using base64 for better compatibility
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
+
       const { data: ocr } = await new Promise<any>((resolve, reject) => {
-        Tesseract.recognize(file, 'eng', {
+        Tesseract.recognize(base64, 'eng', {
           logger: (m) => {
             if (m.status === 'recognizing text') {
               // you can optionally show progress
