@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Eye, EyeOff, Mail, Lock, User, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { supabase } from "@/integrations/supabase/client";
 
 export const AuthModal = () => {
   const { showAuthModal, setShowAuthModal, signIn, signUp, loading } = useAuth();
@@ -108,6 +109,34 @@ export const AuthModal = () => {
     setError('');
   };
 
+  const handleResend = async () => {
+    if (!signInData.email) {
+      setError('Enter your email to resend verification.');
+      return;
+    }
+    const { error } = await supabase.auth.resend({ type: 'signup', email: signInData.email });
+    if (error) {
+      setError(error.message);
+    } else {
+      toast('Verification email sent. Please check your inbox.');
+    }
+  };
+
+  const handleReset = async () => {
+    if (!signInData.email) {
+      setError('Enter your email to reset your password.');
+      return;
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(signInData.email, {
+      redirectTo: `${window.location.origin}/`,
+    });
+    if (error) {
+      setError(error.message);
+    } else {
+      toast('Password reset email sent. Please check your inbox.');
+    }
+  };
+
   const handleClose = () => {
     setShowAuthModal(false);
     resetForms();
@@ -116,18 +145,18 @@ export const AuthModal = () => {
   if (loading) return null;
 
   return (
-    <Dialog open={showAuthModal} onOpenChange={handleClose}>
+    <Dialog open={showAuthModal} onOpenChange={(open) => { setShowAuthModal(open); if (!open) resetForms(); }}>
       <DialogContent className="sm:max-w-md max-w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-center text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
             Welcome to MedGo
           </DialogTitle>
+          <DialogDescription className="text-center text-muted-foreground text-sm">
+            Sign in to unlock all features and access your health history
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          <p className="text-center text-muted-foreground text-sm">
-            Sign in to unlock all features and access your health history
-          </p>
 
           {error && (
             <Alert variant="destructive">
@@ -199,6 +228,10 @@ export const AuthModal = () => {
                     'Sign In'
                   )}
                 </Button>
+                <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">
+                  <button type="button" className="underline" onClick={handleResend}>Resend verification email</button>
+                  <button type="button" className="underline" onClick={handleReset}>Forgot password?</button>
+                </div>
               </form>
             </TabsContent>
 
