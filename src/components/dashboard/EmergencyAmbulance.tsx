@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -28,24 +28,63 @@ export const EmergencyAmbulance = ({ user }: EmergencyBookingProps) => {
   const [bookingDetails, setBookingDetails] = useState({
     patientName: '',
     phoneNumber: '',
-    emergencyType: '',
+    emergencyType: 'Medical Emergency',
     description: '',
     pickupAddress: ''
   });
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
   const radiusKm = 5;
   const [drivers, setDrivers] = useState<{ driver_id: string; lat: number; lng: number; distance_km: number }[]>([]);
   const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
+
+  // Auto-fill user profile data
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('first_name, last_name, phone, emergency_contact_name, emergency_contact_phone')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (profile) {
+          setUserProfile(profile);
+          setBookingDetails(prev => ({
+            ...prev,
+            patientName: profile.first_name && profile.last_name 
+              ? `${profile.first_name} ${profile.last_name}`.trim()
+              : profile.emergency_contact_name || '',
+            phoneNumber: profile.phone || profile.emergency_contact_phone || ''
+          }));
+        }
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+      }
+    };
+
+    fetchUserProfile();
+  }, [user?.id]);
 
   const sendAlerts = async () => {
     if (!userLocation) {
       toast("Please get your location first");
       return;
     }
-    if (!bookingDetails.patientName || !bookingDetails.phoneNumber || !bookingDetails.emergencyType) {
-      toast("Please fill in all required fields");
-      return;
-    }
+    // Auto-fill missing data from profile if available
+    const finalDetails = {
+      patientName: bookingDetails.patientName || 
+        (userProfile?.first_name && userProfile?.last_name 
+          ? `${userProfile.first_name} ${userProfile.last_name}`.trim()
+          : userProfile?.emergency_contact_name || 'Emergency Patient'),
+      phoneNumber: bookingDetails.phoneNumber || 
+        userProfile?.phone || 
+        userProfile?.emergency_contact_phone || 
+        'Contact Emergency Services',
+      emergencyType: bookingDetails.emergencyType || 'Medical Emergency'
+    };
     setIsBooking(true);
     try {
       const { data, error } = await supabase.functions.invoke('dispatch-ambulance', {
@@ -53,16 +92,25 @@ export const EmergencyAmbulance = ({ user }: EmergencyBookingProps) => {
           lat: userLocation[1],
           lng: userLocation[0],
           radiusKm,
-          emergencyType: bookingDetails.emergencyType,
+          emergencyType: finalDetails.emergencyType,
           description: bookingDetails.description,
           pickupAddress: bookingDetails.pickupAddress,
         }
       });
       if (error) throw error;
-      toast(`Alerts sent to ${data?.notified ?? 0} nearby ambulances`);
+      toast(`Emergency alert sent to ${data?.notified ?? 0} nearby ambulances! Help is on the way.`);
+      
+      // Also call emergency number automatically
+      setTimeout(() => {
+        if (window.confirm('Would you like to call emergency services directly as well?')) {
+          callEmergency();
+        }
+      }, 1000);
     } catch (e) {
       console.error('Dispatch error', e);
-      toast("Failed to send alerts");
+      toast("Failed to send alerts. Calling emergency services...");
+      // Fallback to direct emergency call
+      setTimeout(callEmergency, 500);
     } finally {
       setIsBooking(false);
     }
@@ -120,7 +168,16 @@ export const EmergencyAmbulance = ({ user }: EmergencyBookingProps) => {
 
   const sendWhatsApp = async () => {
     try {
-      const msg = `Emergency: ${bookingDetails.emergencyType}\nPatient: ${bookingDetails.patientName} (${bookingDetails.phoneNumber})\nLocation: ${userLocation?.[1]}, ${userLocation?.[0]}\nAddress: ${bookingDetails.pickupAddress}\nNotes: ${bookingDetails.description}`;
+      const patientName = bookingDetails.patientName || 
+        (userProfile?.first_name && userProfile?.last_name 
+          ? `${userProfile.first_name} ${userProfile.last_name}`.trim()
+          : 'Emergency Patient');
+      const phoneNumber = bookingDetails.phoneNumber || 
+        userProfile?.phone || 
+        userProfile?.emergency_contact_phone || 
+        'Contact Emergency Services';
+      
+      const msg = `🚨 EMERGENCY ALERT 🚨\nType: ${bookingDetails.emergencyType}\nPatient: ${patientName} (${phoneNumber})\nLocation: ${userLocation?.[1]}, ${userLocation?.[0]}\nAddress: ${bookingDetails.pickupAddress}\nDetails: ${bookingDetails.description}`;
       const { error } = await supabase.functions.invoke('send-callmebot', { body: { text: msg } });
       if (error) throw error;
       toast('WhatsApp alert sent');
@@ -165,7 +222,7 @@ const getCurrentLocation = () => {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h2 className="text-3xl font-bold bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent mb-2">
+        <h2 className="text-3xl font-bold bg-gradient-to-r from-destructive to-primary bg-clip-text text-transparent mb-2">
           Emergency Ambulance
         </h2>
         <p className="text-muted-foreground">
@@ -245,7 +302,7 @@ const getCurrentLocation = () => {
               <Phone className="h-4 w-4 mr-2" />
               WhatsApp alert
             </Button>
-            <Button onClick={sendAlerts} disabled={isBooking} className="bg-red-500 hover:bg-red-600 text-white">
+            <Button onClick={sendAlerts} disabled={isBooking} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
               {isBooking ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -254,9 +311,13 @@ const getCurrentLocation = () => {
               ) : (
                 <>
                   <Ambulance className="h-4 w-4 mr-2" />
-                  Send Emergency Alert
+                  🚨 Call Ambulance Now
                 </>
               )}
+            </Button>
+            <Button variant="outline" size="sm" onClick={callEmergency} className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground">
+              <Phone className="h-4 w-4 mr-2" />
+              📞 Emergency Call (108)
             </Button>
           </div>
         </div>
@@ -308,28 +369,28 @@ const getCurrentLocation = () => {
   </CardHeader>
   <CardContent className="space-y-4">
     <div className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="patientName">Patient Name *</Label>
+        <div className="space-y-2">
+        <Label htmlFor="patientName">Patient Name (Auto-filled from profile)</Label>
         <Input
           id="patientName"
-          placeholder="Enter patient name"
+          placeholder="Will use profile name if empty"
           value={bookingDetails.patientName}
           onChange={(e) => setBookingDetails({...bookingDetails, patientName: e.target.value})}
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="phoneNumber">Phone Number *</Label>
+        <Label htmlFor="phoneNumber">Phone Number (Auto-filled from profile)</Label>
         <Input
           id="phoneNumber"
-          placeholder="Phone number"
+          placeholder="Will use profile phone if empty"
           value={bookingDetails.phoneNumber}
           onChange={(e) => setBookingDetails({...bookingDetails, phoneNumber: e.target.value})}
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="emergencyType">Emergency Type *</Label>
+        <Label htmlFor="emergencyType">Emergency Type</Label>
         <Input
           id="emergencyType"
           placeholder="e.g., Heart Attack, Accident, etc."
@@ -362,20 +423,25 @@ const getCurrentLocation = () => {
       <Alert>
         <Heart className="h-4 w-4" />
         <AlertDescription>
-          Your alert will be sent instantly to available drivers in the area.
+          ⚡ One-click emergency: Auto-fills your profile data and sends instant alerts to nearby drivers.
         </AlertDescription>
       </Alert>
 
-      <Button onClick={sendAlerts} disabled={isBooking || !userLocation} className="w-full">
-        {isBooking ? (
-          <>
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            Sending Alerts...
-          </>
-        ) : (
-          <>Send Alerts</>
-        )}
-      </Button>
+      <div className="flex gap-2">
+        <Button onClick={sendAlerts} disabled={isBooking || !userLocation} className="flex-1 bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+          {isBooking ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Alerting Ambulances...
+            </>
+          ) : (
+            <>🚨 Send Emergency Alert</>
+          )}
+        </Button>
+        <Button onClick={callEmergency} variant="outline" disabled={isBooking} className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground">
+          📞 Call 108
+        </Button>
+      </div>
     </div>
   </CardContent>
 </Card>
