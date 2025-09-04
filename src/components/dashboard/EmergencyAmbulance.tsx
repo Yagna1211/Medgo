@@ -98,19 +98,11 @@ export const EmergencyAmbulance = ({ user }: EmergencyBookingProps) => {
         }
       });
       if (error) throw error;
+      // Emergency alert sent, no additional call needed
       toast(`Emergency alert sent to ${data?.notified ?? 0} nearby ambulances! Help is on the way.`);
-      
-      // Also call emergency number automatically
-      setTimeout(() => {
-        if (window.confirm('Would you like to call emergency services directly as well?')) {
-          callEmergency();
-        }
-      }, 1000);
     } catch (e) {
       console.error('Dispatch error', e);
-      toast("Failed to send alerts. Calling emergency services...");
-      // Fallback to direct emergency call
-      setTimeout(callEmergency, 500);
+      toast("Failed to send alerts. Please try again or contact emergency services directly.");
     } finally {
       setIsBooking(false);
     }
@@ -166,7 +158,7 @@ export const EmergencyAmbulance = ({ user }: EmergencyBookingProps) => {
     }
   };
 
-  const sendWhatsApp = async () => {
+  const sendSMS = async () => {
     try {
       const patientName = bookingDetails.patientName || 
         (userProfile?.first_name && userProfile?.last_name 
@@ -174,18 +166,24 @@ export const EmergencyAmbulance = ({ user }: EmergencyBookingProps) => {
           : 'Emergency Patient');
       const phoneNumber = bookingDetails.phoneNumber || 
         userProfile?.phone || 
-        userProfile?.emergency_contact_phone || 
-        'Contact Emergency Services';
+        userProfile?.emergency_contact_phone;
       
-      const msg = `🚨 EMERGENCY ALERT 🚨\nType: ${bookingDetails.emergencyType}\nPatient: ${patientName} (${phoneNumber})\nLocation: ${userLocation?.[1]}, ${userLocation?.[0]}\nAddress: ${bookingDetails.pickupAddress}\nDetails: ${bookingDetails.description}`;
-      const { error } = await supabase.functions.invoke('send-callmebot', { body: { text: msg } });
+      if (!phoneNumber) {
+        toast('No phone number available for SMS');
+        return;
+      }
+      
+      const msg = `🚨 EMERGENCY ALERT 🚨\nType: ${bookingDetails.emergencyType}\nPatient: ${patientName}\nLocation: ${userLocation?.[1]}, ${userLocation?.[0]}\nAddress: ${bookingDetails.pickupAddress}\nDetails: ${bookingDetails.description}`;
+      const { error } = await supabase.functions.invoke('send-sms', { 
+        body: { phoneNumber, message: msg } 
+      });
       if (error) throw error;
-      toast('WhatsApp alert sent');
+      toast('Emergency SMS sent successfully');
     } catch (e: any) {
-      if (e?.message?.includes('CALLMEBOT')) {
-        toast('WhatsApp not configured. Add CALLMEBOT_API_KEY and CALLMEBOT_PHONE in Supabase secrets.');
+      if (e?.message?.includes('FAST2SMS')) {
+        toast('SMS service not configured. Please contact support.');
       } else {
-        toast('Failed to send WhatsApp alert');
+        toast('Failed to send SMS: ' + (e.message || 'Unknown error'));
       }
     }
   };
@@ -215,9 +213,6 @@ const getCurrentLocation = () => {
 
 
 
-  const callEmergency = () => {
-    window.open('tel:108', '_self'); // 108 is India's emergency ambulance number
-  };
 
   return (
     <div className="space-y-6">
@@ -298,9 +293,9 @@ const getCurrentLocation = () => {
               <Navigation className="h-4 w-4 mr-2" />
               Draw route
             </Button>
-            <Button variant="outline" size="sm" onClick={sendWhatsApp}>
+            <Button variant="outline" size="sm" onClick={sendSMS}>
               <Phone className="h-4 w-4 mr-2" />
-              WhatsApp alert
+              Send SMS Alert
             </Button>
             <Button onClick={sendAlerts} disabled={isBooking} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
               {isBooking ? (
@@ -314,10 +309,6 @@ const getCurrentLocation = () => {
                   🚨 Call Ambulance Now
                 </>
               )}
-            </Button>
-            <Button variant="outline" size="sm" onClick={callEmergency} className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground">
-              <Phone className="h-4 w-4 mr-2" />
-              📞 Emergency Call (108)
             </Button>
           </div>
         </div>
@@ -349,7 +340,7 @@ const getCurrentLocation = () => {
           Open destination in Google Maps
         </a>
         <div>
-          <Button variant="outline" onClick={sendWhatsApp}>Send WhatsApp alert (optional)</Button>
+          <Button variant="outline" onClick={sendSMS}>Send SMS Alert (Optional)</Button>
         </div>
       </div>
     )}
@@ -437,9 +428,6 @@ const getCurrentLocation = () => {
           ) : (
             <>🚨 Send Emergency Alert</>
           )}
-        </Button>
-        <Button onClick={callEmergency} variant="outline" disabled={isBooking} className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground">
-          📞 Call 108
         </Button>
       </div>
     </div>

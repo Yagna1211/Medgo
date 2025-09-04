@@ -255,16 +255,9 @@ const Index = () => {
             <Stethoscope className="h-6 w-6 text-primary" />
             <span className="text-xl font-bold">MedGo</span>
           </div>
-          <p className="text-muted-foreground mb-4">
-            Your trusted companion for health insights and emergency services
+          <p className="text-muted-foreground">
+            All rights reserved by MedGo
           </p>
-          <div className="flex justify-center items-center space-x-6 text-sm text-muted-foreground">
-            <span>Privacy Policy</span>
-            <span>•</span>
-            <span>Terms of Service</span>
-            <span>•</span>
-            <span>Contact Support</span>
-          </div>
         </div>
       </footer>
     </div>
