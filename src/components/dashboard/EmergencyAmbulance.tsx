@@ -73,36 +73,43 @@ export const EmergencyAmbulance = ({ user }: EmergencyBookingProps) => {
       toast("Please get your location first");
       return;
     }
+    
     // Auto-fill missing data from profile if available
-    const finalDetails = {
-      patientName: bookingDetails.patientName || 
-        (userProfile?.first_name && userProfile?.last_name 
-          ? `${userProfile.first_name} ${userProfile.last_name}`.trim()
-          : userProfile?.emergency_contact_name || 'Emergency Patient'),
-      phoneNumber: bookingDetails.phoneNumber || 
-        userProfile?.phone || 
-        userProfile?.emergency_contact_phone || 
-        'Contact Emergency Services',
-      emergencyType: bookingDetails.emergencyType || 'Medical Emergency'
-    };
+    const customerName = bookingDetails.patientName || 
+      (userProfile?.first_name && userProfile?.last_name 
+        ? `${userProfile.first_name} ${userProfile.last_name}`.trim()
+        : userProfile?.emergency_contact_name || 'Emergency Patient');
+    
+    const customerPhone = bookingDetails.phoneNumber || 
+      userProfile?.phone || 
+      userProfile?.emergency_contact_phone || 
+      'N/A';
+
     setIsBooking(true);
     try {
-      const { data, error } = await supabase.functions.invoke('dispatch-ambulance', {
+      const { data, error } = await supabase.functions.invoke('send-driver-alerts', {
         body: {
-          lat: userLocation[1],
-          lng: userLocation[0],
-          radiusKm,
-          emergencyType: finalDetails.emergencyType,
+          customerId: user.id,
+          customerName,
+          customerPhone,
+          customerLat: userLocation[1],
+          customerLng: userLocation[0],
+          emergencyType: bookingDetails.emergencyType,
           description: bookingDetails.description,
           pickupAddress: bookingDetails.pickupAddress,
         }
       });
+      
       if (error) throw error;
-      // Emergency alert sent, no additional call needed
-      toast(`Emergency alert sent to ${data?.notified ?? 0} nearby ambulances! Help is on the way.`);
+      
+      if (data?.success) {
+        toast(`🚨 Emergency alert sent to ${data.driversNotified} nearby ambulance drivers! Help is on the way.`);
+      } else {
+        toast(data?.message || "No available drivers found nearby. Please try emergency services: 108");
+      }
     } catch (e) {
-      console.error('Dispatch error', e);
-      toast("Failed to send alerts. Please try again or contact emergency services directly.");
+      console.error('Emergency alert error:', e);
+      toast("Failed to send emergency alerts. Please call 108 immediately!");
     } finally {
       setIsBooking(false);
     }
@@ -293,15 +300,11 @@ const getCurrentLocation = () => {
               <Navigation className="h-4 w-4 mr-2" />
               Draw route
             </Button>
-            <Button variant="outline" size="sm" onClick={sendSMS}>
-              <Phone className="h-4 w-4 mr-2" />
-              Send SMS Alert
-            </Button>
             <Button onClick={sendAlerts} disabled={isBooking} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
               {isBooking ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Sending...
+                  Sending Emergency Alert...
                 </>
               ) : (
                 <>
@@ -337,11 +340,8 @@ const getCurrentLocation = () => {
           target="_blank" rel="noopener noreferrer"
           className="inline-flex items-center text-sm underline"
         >
-          Open destination in Google Maps
+          Open location in Google Maps
         </a>
-        <div>
-          <Button variant="outline" onClick={sendSMS}>Send SMS Alert (Optional)</Button>
-        </div>
       </div>
     )}
   </CardContent>

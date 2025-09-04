@@ -4,7 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Stethoscope, Eye, EyeOff, Mail, Lock, User, Users, PhoneCall, Bell, MapPin, Navigation } from "lucide-react";
+import { Stethoscope, Eye, EyeOff, Mail, Lock, User, Users, PhoneCall, Bell, MapPin, Navigation, Car, UserCheck } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -20,6 +22,10 @@ export const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
     password: "",
     firstName: "",
     lastName: "",
+    role: "customer",
+    ambulanceNumber: "",
+    vehicleDetails: "",
+    serviceArea: "",
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -67,6 +73,10 @@ export const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
           data: {
             first_name: formData.firstName,
             last_name: formData.lastName,
+            role: formData.role,
+            ambulance_number: formData.ambulanceNumber,
+            vehicle_details: formData.vehicleDetails,
+            service_area: formData.serviceArea,
           }
         }
       });
@@ -196,6 +206,72 @@ export const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
                     />
                   </div>
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="role">Role</Label>
+                  <Select value={formData.role} onValueChange={(value) => setFormData(prev => ({ ...prev, role: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="customer">
+                        <div className="flex items-center gap-2">
+                          <UserCheck className="h-4 w-4" />
+                          Customer
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="driver">
+                        <div className="flex items-center gap-2">
+                          <Car className="h-4 w-4" />
+                          Ambulance Driver
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {formData.role === "driver" && (
+                  <div className="space-y-4 p-4 border rounded-lg bg-secondary/5">
+                    <h3 className="font-semibold text-sm">Driver Information</h3>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="ambulanceNumber">Ambulance Number</Label>
+                      <Input
+                        id="ambulanceNumber"
+                        name="ambulanceNumber"
+                        placeholder="e.g., AMB-001"
+                        value={formData.ambulanceNumber}
+                        onChange={handleInputChange}
+                        required={formData.role === "driver"}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="vehicleDetails">Vehicle Details</Label>
+                      <Textarea
+                        id="vehicleDetails"
+                        name="vehicleDetails"
+                        placeholder="Vehicle model, equipment, capacity, etc."
+                        value={formData.vehicleDetails}
+                        onChange={(e) => setFormData(prev => ({ ...prev, vehicleDetails: e.target.value }))}
+                        rows={2}
+                        required={formData.role === "driver"}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="serviceArea">Service Area</Label>
+                      <Input
+                        id="serviceArea"
+                        name="serviceArea"
+                        placeholder="e.g., Downtown, North District, etc."
+                        value={formData.serviceArea}
+                        onChange={handleInputChange}
+                        required={formData.role === "driver"}
+                      />
+                    </div>
+                  </div>
+                )}
                 
                 <div className="space-y-2">
                   <Label htmlFor="signup-email">Email</Label>

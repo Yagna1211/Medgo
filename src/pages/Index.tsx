@@ -228,22 +228,7 @@ const Index = () => {
       <section className="bg-white py-16">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
-            <div className="space-y-2">
-              <div className="text-3xl font-bold text-primary">10K+</div>
-              <div className="text-muted-foreground">Medicines Scanned</div>
-            </div>
-            <div className="space-y-2">
-              <div className="text-3xl font-bold text-green-600">95%</div>
-              <div className="text-muted-foreground">Accuracy Rate</div>
-            </div>
-            <div className="space-y-2">
-              <div className="text-3xl font-bold text-red-600">24/7</div>
-              <div className="text-muted-foreground">Emergency Support</div>
-            </div>
-            <div className="space-y-2">
-              <div className="text-3xl font-bold text-purple-600">5K+</div>
-              <div className="text-muted-foreground">Happy Users</div>
-            </div>
+            
           </div>
         </div>
       </section>

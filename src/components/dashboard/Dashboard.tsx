@@ -1,32 +1,8 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useTheme } from "next-themes";
-import { 
-  Stethoscope, 
-  Upload, 
-  Search, 
-  History, 
-  User, 
-  LogOut,
-  Camera,
-  FileText,
-  Activity,
-  Shield,
-  Sun,
-  Moon,
-  Ambulance
-} from "lucide-react";
-import { MedicineScanner } from "./MedicineScanner";
-import { SymptomAnalyzer } from "./SymptomAnalyzer";
-import { UserHistory } from "./UserHistory";
-import { UserProfile } from "./UserProfile";
-import { EmergencyAmbulance } from "./EmergencyAmbulance";
-import heroImage from "@/assets/hero-medical.jpg";
-import medicineIcon from "@/assets/medicine-icon.jpg";
-import symptomIcon from "@/assets/symptom-icon.jpg";
+import { supabase } from "@/integrations/supabase/client";
+import { CustomerDashboard } from "./CustomerDashboard";
+import { DriverDashboard } from "./DriverDashboard";
+import { LoadingScreen } from "@/components/ui/loading-screen";
 
 interface DashboardProps {
   user: any;
@@ -35,270 +11,44 @@ interface DashboardProps {
 }
 
 export const Dashboard = ({ user, onLogout, initialView }: DashboardProps) => {
-  const [activeTab, setActiveTab] = useState(initialView || "home");
-  const { theme, setTheme } = useTheme();
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Switch to initial view when provided
   useEffect(() => {
-    if (initialView) {
-      setActiveTab(initialView);
-    }
-  }, [initialView]);
+    const fetchUserProfile = async () => {
+      if (!user?.id) {
+        setIsLoading(false);
+        return;
+      }
+      
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+        
+        setUserProfile(profile);
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  // SEO: page title, meta description, canonical
-  useEffect(() => {
-    document.title = "MediScan Dashboard – Advanced Health Intelligence";
-    const desc = document.querySelector('meta[name="description"]') || (() => {
-      const m = document.createElement('meta');
-      m.setAttribute('name', 'description');
-      document.head.appendChild(m);
-      return m;
-    })();
-    (desc as HTMLMetaElement).setAttribute('content', 'MediScan dashboard for medicine scanning, symptom analysis, and ambulance booking.');
-    let link = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
-    if (!link) {
-      link = document.createElement('link');
-      link.setAttribute('rel', 'canonical');
-      document.head.appendChild(link);
-    }
-    link.setAttribute('href', window.location.href);
-  }, []);
+    fetchUserProfile();
+  }, [user?.id]);
 
-  const features = [
-    {
-      title: "Medicine Scanner",
-      description: "Upload a photo of any medicine to get detailed information",
-      icon: Camera,
-      image: medicineIcon,
-      action: () => setActiveTab("scanner"),
-      color: "from-blue-500 to-cyan-500"
-    },
-    {
-      title: "Symptom Analysis",
-      description: "Analyze your symptoms to understand possible conditions",
-      icon: Search,
-      image: symptomIcon,
-      action: () => setActiveTab("symptoms"),
-      color: "from-green-500 to-teal-500"
-    },
-    {
-      title: "Ambulance Booking",
-      description: "Book a nearby ambulance instantly",
-      icon: Ambulance,
-      action: () => setActiveTab("ambulance"),
-      color: "from-red-500 to-orange-500"
-    },
-    {
-      title: "Health History",
-      description: "View your medical scanning and analysis history",
-      icon: History,
-      action: () => setActiveTab("history"),
-      color: "from-purple-500 to-pink-500"
-    },
-    {
-      title: "Profile Settings",
-      description: "Manage your account and preferences",
-      icon: User,
-      action: () => setActiveTab("profile"),
-      color: "from-orange-500 to-red-500"
-    }
-  ];
+  if (isLoading) {
+    return <LoadingScreen onComplete={() => setIsLoading(false)} />;
+  }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-primary/10 sticky top-0 z-50">
-        <div className="max-w-screen-2xl mx-auto px-6 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="h-10 w-10 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center">
-                <Stethoscope className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                  MediScan
-                </h1>
-                <p className="text-sm text-muted-foreground">Health Intelligence Platform</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-medium">Welcome, {user.user_metadata?.first_name || user.email?.split('@')[0]}</p>
-                <p className="text-xs text-muted-foreground">{user.email}</p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              >
-                {theme === "dark" ? (
-                  <Sun className="h-4 w-4" />
-                ) : (
-                  <Moon className="h-4 w-4" />
-                )}
-              </Button>
-              <Button variant="outline" size="sm" onClick={onLogout}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+  // Default to customer if no profile or role found
+  const userRole = userProfile?.role || 'customer';
 
-      <div className="max-w-screen-2xl mx-auto px-6 py-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-          <TabsList className="grid grid-cols-3 md:grid-cols-6 gap-2 bg-white/50 backdrop-blur-sm p-2 rounded-xl">
-            <TabsTrigger value="home" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Stethoscope className="h-5 w-5 mr-2" />
-              Home
-            </TabsTrigger>
-            <TabsTrigger value="scanner" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Camera className="h-5 w-5 mr-2" />
-              Scanner
-            </TabsTrigger>
-            <TabsTrigger value="symptoms" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Search className="h-5 w-5 mr-2" />
-              Symptoms
-            </TabsTrigger>
-            <TabsTrigger value="ambulance" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Ambulance className="h-5 w-5 mr-2" />
-              Ambulance
-            </TabsTrigger>
-            <TabsTrigger value="history" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <History className="h-5 w-5 mr-2" />
-              History
-            </TabsTrigger>
-            <TabsTrigger value="profile" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <User className="h-5 w-5 mr-2" />
-              Profile
-            </TabsTrigger>
-          </TabsList>
+  if (userRole === 'driver') {
+    return <DriverDashboard user={user} />;
+  }
 
-          <TabsContent value="home" className="space-y-8">
-            {/* Hero Section */}
-            <div className="relative overflow-hidden rounded-2xl shadow-[var(--shadow-medical)]">
-              <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-secondary/90"></div>
-              <img 
-                src={heroImage} 
-                alt="Advanced Health Intelligence banner" 
-                className="w-full h-72 md:h-80 lg:h-96 object-cover"
-              />
-              <div className="absolute inset-0 flex items-center justify-center text-center text-white p-8">
-                <div>
-                  <h2 className="text-4xl md:text-5xl font-bold mb-4">
-                    Advanced Health Intelligence
-                  </h2>
-                  <p className="text-lg md:text-xl opacity-90 mb-6">
-                    Scan medicines and analyze symptoms with AI-powered precision
-                  </p>
-                  <div className="flex gap-4 justify-center">
-                    <Button variant="hero" size="lg" onClick={() => setActiveTab("scanner")}>
-                      Start Scanning
-                    </Button>
-                    <Button variant="outline" className="bg-white/20 border-white/30 text-white hover:bg-white/30">
-                      Learn More
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Features Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-              {features.map((feature, index) => (
-                <Card 
-                  key={index} 
-                  className="group h-full min-h-[240px] flex flex-col cursor-pointer transition-all duration-300 hover:shadow-[var(--shadow-medical)] hover:scale-[1.02] border-primary/10 overflow-hidden"
-                  onClick={feature.action}
-                >
-                  <div className={`h-2 bg-gradient-to-r ${feature.color}`}></div>
-                  <CardHeader className="text-center pb-4">
-                    {feature.image ? (
-                      <div className="mx-auto mb-4">
-                        <img 
-                          src={feature.image} 
-                          alt={feature.title}
-                          className="h-20 w-20 rounded-lg object-cover shadow-md"
-                        />
-                      </div>
-                    ) : (
-                      <div className={`mx-auto h-16 w-16 bg-gradient-to-br ${feature.color} rounded-lg flex items-center justify-center mb-4 shadow-md`}>
-                        <feature.icon className="h-10 w-10 text-white" />
-                      </div>
-                    )}
-                    <CardTitle className="text-lg group-hover:text-primary transition-colors">
-                      {feature.title}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="mt-auto">
-                    <CardDescription className="text-center text-sm">
-                      {feature.description}
-                    </CardDescription>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="border-primary/10 shadow-[var(--shadow-card)]">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Medicines Scanned</CardTitle>
-                  <Camera className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-primary">47</div>
-                  <p className="text-xs text-muted-foreground">+12 this month</p>
-                </CardContent>
-              </Card>
-              
-              <Card className="border-primary/10 shadow-[var(--shadow-card)]">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Symptom Analyses</CardTitle>
-                  <Activity className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-secondary">23</div>
-                  <p className="text-xs text-muted-foreground">+5 this week</p>
-                </CardContent>
-              </Card>
-              
-              <Card className="border-primary/10 shadow-[var(--shadow-card)]">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Health Score</CardTitle>
-                  <Shield className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-accent">85%</div>
-                  <p className="text-xs text-muted-foreground">Excellent health tracking</p>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="scanner">
-            <MedicineScanner user={user} />
-          </TabsContent>
-
-          <TabsContent value="symptoms">
-            <SymptomAnalyzer user={user} />
-          </TabsContent>
-
-          <TabsContent value="ambulance">
-            <EmergencyAmbulance user={user} />
-          </TabsContent>
-
-          <TabsContent value="history">
-            <UserHistory user={user} />
-          </TabsContent>
-
-          <TabsContent value="profile">
-            <UserProfile user={user} />
-          </TabsContent>
-        </Tabs>
-      </div>
-    </div>
-  );
+  return <CustomerDashboard user={user} />;
 };

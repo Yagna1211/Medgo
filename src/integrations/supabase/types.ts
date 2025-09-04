@@ -110,6 +110,51 @@ export type Database = {
         }
         Relationships: []
       }
+      ambulance_requests: {
+        Row: {
+          created_at: string
+          customer_id: string
+          customer_location: unknown
+          customer_name: string
+          customer_phone: string
+          description: string | null
+          driver_id: string | null
+          emergency_type: string | null
+          id: string
+          pickup_address: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          customer_location: unknown
+          customer_name: string
+          customer_phone: string
+          description?: string | null
+          driver_id?: string | null
+          emergency_type?: string | null
+          id?: string
+          pickup_address?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          customer_location?: unknown
+          customer_name?: string
+          customer_phone?: string
+          description?: string | null
+          driver_id?: string | null
+          emergency_type?: string | null
+          id?: string
+          pickup_address?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       driver_status: {
         Row: {
           available: boolean
@@ -182,6 +227,7 @@ export type Database = {
       profiles: {
         Row: {
           allergies: string | null
+          ambulance_number: string | null
           created_at: string
           current_medications: string | null
           data_sharing_consent: boolean | null
@@ -192,16 +238,21 @@ export type Database = {
           first_name: string | null
           gender: string | null
           id: string
+          is_available: boolean | null
           last_name: string | null
           medical_conditions: string | null
           notification_preferences: boolean | null
           phone: string | null
           preferred_language: string | null
+          role: string | null
+          service_area: string | null
           updated_at: string
           user_id: string
+          vehicle_details: string | null
         }
         Insert: {
           allergies?: string | null
+          ambulance_number?: string | null
           created_at?: string
           current_medications?: string | null
           data_sharing_consent?: boolean | null
@@ -212,16 +263,21 @@ export type Database = {
           first_name?: string | null
           gender?: string | null
           id?: string
+          is_available?: boolean | null
           last_name?: string | null
           medical_conditions?: string | null
           notification_preferences?: boolean | null
           phone?: string | null
           preferred_language?: string | null
+          role?: string | null
+          service_area?: string | null
           updated_at?: string
           user_id: string
+          vehicle_details?: string | null
         }
         Update: {
           allergies?: string | null
+          ambulance_number?: string | null
           created_at?: string
           current_medications?: string | null
           data_sharing_consent?: boolean | null
@@ -232,13 +288,17 @@ export type Database = {
           first_name?: string | null
           gender?: string | null
           id?: string
+          is_available?: boolean | null
           last_name?: string | null
           medical_conditions?: string | null
           notification_preferences?: boolean | null
           phone?: string | null
           preferred_language?: string | null
+          role?: string | null
+          service_area?: string | null
           updated_at?: string
           user_id?: string
+          vehicle_details?: string | null
         }
         Relationships: []
       }
