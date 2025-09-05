@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { 
   Upload, 
   Camera, 
@@ -15,22 +17,28 @@ import {
   Clock,
   Zap,
   Shield,
-  Search
+  Search,
+  AlertCircle,
+  Star,
+  Database,
+  ExternalLink
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import Tesseract from "tesseract.js";
 
-interface MedicineInfo {
+interface MedicineMatch {
   name: string;
   genericName: string;
   manufacturer: string;
+  activeIngredients: string[];
   uses: string[];
   dosage: string;
   sideEffects: string[];
   precautions: string[];
-  activeIngredients: string[];
+  isRecalled: boolean;
+  expiryStatus: string;
   confidence: number;
+  source: string;
 }
 
 interface MedicineScannerProps {
@@ -41,7 +49,11 @@ export const MedicineScanner = ({ user }: MedicineScannerProps) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [medicineInfo, setMedicineInfo] = useState<MedicineInfo | null>(null);
+  const [medicineMatches, setMedicineMatches] = useState<MedicineMatch[]>([]);
+  const [selectedMatch, setSelectedMatch] = useState<MedicineMatch | null>(null);
+  const [extractedText, setExtractedText] = useState<string>('');
+  const [manualSearchTerm, setManualSearchTerm] = useState<string>('');
+  const [showManualSearch, setShowManualSearch] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -50,15 +62,16 @@ export const MedicineScanner = ({ user }: MedicineScannerProps) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         setUploadedImage(e.target?.result as string);
-        // Store the file for later analysis
         setSelectedFile(file);
         // Reset previous results
-        setMedicineInfo(null);
+        setMedicineMatches([]);
+        setSelectedMatch(null);
+        setExtractedText('');
+        setShowManualSearch(false);
       };
       reader.readAsDataURL(file);
     }
   };
-
 
   const startAnalysis = async () => {
     if (!selectedFile) {
@@ -68,125 +81,91 @@ export const MedicineScanner = ({ user }: MedicineScannerProps) => {
     await analyzeMedicine(selectedFile);
   };
 
-  const analyzeMedicine = async (file: File) => {
+  const startManualSearch = async () => {
+    if (!manualSearchTerm.trim()) {
+      toast("Please enter a medicine name to search.");
+      return;
+    }
+    await analyzeMedicine(null, manualSearchTerm.trim());
+  };
+
+  const analyzeMedicine = async (file: File | null, manualSearch?: string) => {
     setIsAnalyzing(true);
-    setMedicineInfo(null);
+    setMedicineMatches([]);
+    setSelectedMatch(null);
 
     try {
-      // 1) OCR the image locally using base64 for better compatibility
-      const reader = new FileReader();
-      const base64 = await new Promise<string>((resolve) => {
-        reader.onload = () => resolve(reader.result as string);
-        reader.readAsDataURL(file);
-      });
-
-      const { data: ocr } = await new Promise<any>((resolve, reject) => {
-        Tesseract.recognize(base64, 'eng', {
-          logger: (m) => {
-            if (m.status === 'recognizing text') {
-              // you can optionally show progress
-            }
-          },
-        })
-          .then((res) => resolve({ data: res }))
-          .catch(reject);
-      });
-
-      const text: string = ocr?.data?.text || '';
-      if (!text.trim()) {
-        throw new Error('Could not read any text from the image. Try a clearer photo.');
-      }
-
-      // 2) Try to infer a medicine name candidate from OCR text
-      const candidates = Array.from(
-        new Set(
-          text
-            .split(/\n|\r|\t|\s{2,}/)
-            .map((s) => s.trim())
-            .filter((s) => s.length > 2 && /[A-Za-z]/.test(s))
-        )
-      ).slice(0, 5);
-
-      async function lookupByName(name: string) {
-        const rxRes = await fetch(
-          `https://rxnav.nlm.nih.gov/REST/rxcui.json?name=${encodeURIComponent(name)}`
-        );
-        let rxcui: string | undefined;
-        if (rxRes.ok) {
-          const rj = await rxRes.json();
-          rxcui = rj?.idGroup?.rxnormId?.[0];
-        }
-
-        const fdaQueries = [
-          `openfda.brand_name:\"${name}\"`,
-          `openfda.generic_name:\"${name}\"`,
-          `openfda.substance_name:\"${name}\"`,
-        ];
-        let fdaData: any = null;
-        for (const q of fdaQueries) {
-          const url = `https://api.fda.gov/drug/label.json?search=${q}&limit=1`;
-          const res = await fetch(url);
-          if (res.ok) {
-            const jj = await res.json();
-            if (jj?.results?.length) { fdaData = jj.results[0]; break; }
-          }
-        }
-        return { rxcui, fdaData };
-      }
-
-      let found: any = null;
-      for (const cand of candidates) {
-        const { rxcui, fdaData } = await lookupByName(cand);
-        if (rxcui || fdaData) { found = { name: cand, rxcui, fdaData }; break; }
-      }
-
-      if (!found) {
-        throw new Error('Could not match medicine from the photo. Try retaking with the label in focus.');
-      }
-
-      const fda = found.fdaData || {};
-      const openfda = fda.openfda || {};
-
-      const info: MedicineInfo = {
-        name: openfda.brand_name?.[0] || found.name || 'Unknown',
-        genericName: openfda.generic_name?.[0] || 'N/A',
-        manufacturer: openfda.manufacturer_name?.[0] || 'N/A',
-        activeIngredients: openfda.substance_name || [],
-        uses: (fda.indications_and_usage?.[0] || '').split(/\n|\.|;|\r/).map(s=>s.trim()).filter(Boolean).slice(0,6),
-        dosage: (fda.dosage_and_administration?.[0] || 'Consult a healthcare provider'),
-        sideEffects: (fda.adverse_reactions?.[0] || fda.warnings?.[0] || '').split(/\n|\.|;|\r/).map(s=>s.trim()).filter(Boolean).slice(0,6),
-        precautions: (fda.precautions?.[0] || fda.warnings_and_precautions?.[0] || '').split(/\n|\.|;|\r/).map(s=>s.trim()).filter(Boolean).slice(0,6),
-        confidence: 90,
-      };
-
-      setMedicineInfo(info);
-
-      // 3) Save to history
-      try {
-        await supabase.from('medicine_scans').insert({
-          user_id: user.id,
-          medicine_name: info.name,
-          generic_name: info.genericName,
-          manufacturer: info.manufacturer,
-          active_ingredients: info.activeIngredients.join(', '),
-          uses: info.uses.join(', '),
-          dosage: info.dosage,
-          side_effects: info.sideEffects.join(', '),
-          precautions: info.precautions.join(', '),
-          confidence_score: info.confidence / 100,
+      let imageBase64 = '';
+      
+      if (file && !manualSearch) {
+        // Convert file to base64
+        const reader = new FileReader();
+        imageBase64 = await new Promise<string>((resolve) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
         });
-      } catch {}
+      }
 
-      toast("Analysis Complete! Medicine identified using OpenFDA/RxNorm.");
+      const { data, error } = await supabase.functions.invoke('analyze-medicine', {
+        body: { 
+          imageBase64: imageBase64,
+          userId: user.id,
+          manualSearch: manualSearch || null
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      if (data.matches && data.matches.length > 0) {
+        setMedicineMatches(data.matches);
+        setSelectedMatch(data.matches[0]); // Select the highest confidence match
+        setExtractedText(data.extractedText || '');
+        
+        if (data.matches[0].confidence > 90) {
+          toast("High confidence match found! Medicine identified successfully.");
+        } else if (data.matches[0].confidence > 70) {
+          toast("Medicine identified with good confidence. Please verify the match.");
+        } else {
+          toast("Multiple possible matches found. Please select the correct one.");
+        }
+      } else {
+        throw new Error(data.suggestion || 'No medicine matches found');
+      }
+
     } catch (error: any) {
+      console.error('Analysis error:', error);
       toast(`Analysis failed: ${error.message}`);
+      setShowManualSearch(true);
     } finally {
       setIsAnalyzing(false);
     }
   };
 
+  const selectMatch = (match: MedicineMatch) => {
+    setSelectedMatch(match);
+    toast(`Selected: ${match.name} (${match.confidence}% confidence)`);
+  };
+
   const triggerFileInput = () => {
     fileInputRef.current?.click();
+  };
+
+  const getConfidenceBadgeVariant = (confidence: number) => {
+    if (confidence >= 90) return "default";
+    if (confidence >= 70) return "secondary";
+    return "outline";
+  };
+
+  const getConfidenceColor = (confidence: number) => {
+    if (confidence >= 90) return "text-green-600";
+    if (confidence >= 70) return "text-yellow-600";
+    return "text-red-600";
   };
 
   return (
@@ -196,20 +175,20 @@ export const MedicineScanner = ({ user }: MedicineScannerProps) => {
           Medicine Scanner
         </h2>
         <p className="text-muted-foreground">
-          Upload a clear photo of your medicine for instant identification and information
+          Upload a clear photo of your medicine or search manually for accurate identification
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Upload Section */}
+        {/* Upload & Search Section */}
         <Card className="border-primary/10 shadow-[var(--shadow-card)]">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Camera className="h-5 w-5 text-primary" />
-              Upload Medicine Photo
+              Medicine Photo & Search
             </CardTitle>
             <CardDescription>
-              Take a clear photo showing the medicine name, shape, and color
+              Upload a medicine photo or search manually if scanning fails
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -232,7 +211,7 @@ export const MedicineScanner = ({ user }: MedicineScannerProps) => {
                     alt="Uploaded medicine" 
                     className="max-h-48 mx-auto rounded-lg shadow-md"
                   />
-                  <div className="flex gap-2 justify-center">
+                  <div className="flex gap-2 justify-center flex-wrap">
                     <Button 
                       onClick={startAnalysis}
                       disabled={isAnalyzing}
@@ -246,7 +225,7 @@ export const MedicineScanner = ({ user }: MedicineScannerProps) => {
                       ) : (
                         <>
                           <Search className="h-4 w-4" />
-                          Analyse Medicine
+                          Scan Medicine
                         </>
                       )}
                     </Button>
@@ -272,11 +251,44 @@ export const MedicineScanner = ({ user }: MedicineScannerProps) => {
               )}
             </div>
 
-            {isAnalyzing && uploadedImage && (
+            {/* Manual Search Section */}
+            <div className="space-y-3">
+              <Separator />
+              <div className="space-y-2">
+                <Label htmlFor="manual-search">Manual Search</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="manual-search"
+                    placeholder="Enter medicine name (e.g., Aspirin, Paracetamol)"
+                    value={manualSearchTerm}
+                    onChange={(e) => setManualSearchTerm(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && startManualSearch()}
+                  />
+                  <Button 
+                    onClick={startManualSearch}
+                    disabled={isAnalyzing || !manualSearchTerm.trim()}
+                    variant="outline"
+                  >
+                    <Search className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {extractedText && (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Text detected:</strong> {extractedText.substring(0, 100)}...
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {isAnalyzing && (
               <Alert>
                 <Loader2 className="h-4 w-4 animate-spin" />
                 <AlertDescription>
-                  Analyzing medicine... This may take a few moments.
+                  {uploadedImage ? "Analyzing medicine photo..." : "Searching medicine database..."}
                 </AlertDescription>
               </Alert>
             )}
@@ -288,77 +300,151 @@ export const MedicineScanner = ({ user }: MedicineScannerProps) => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Pill className="h-5 w-5 text-secondary" />
-              Analysis Results
+              Medicine Information
             </CardTitle>
             <CardDescription>
-              Detailed information about the identified medicine
+              Accurate medicine details from FDA and medical databases
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {!medicineInfo && !isAnalyzing && (
+            {!medicineMatches.length && !isAnalyzing && (
               <div className="text-center py-8 text-muted-foreground">
                 <Info className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Upload a medicine photo to see analysis results</p>
+                <p>Upload a medicine photo or search manually to see results</p>
+                {showManualSearch && (
+                  <p className="text-sm mt-2 text-orange-600">
+                    Photo scanning failed. Try manual search above.
+                  </p>
+                )}
               </div>
             )}
 
             {isAnalyzing && (
               <div className="text-center py-8">
                 <Loader2 className="h-12 w-12 mx-auto mb-4 animate-spin text-primary" />
-                <p className="text-muted-foreground">Analyzing medicine...</p>
+                <p className="text-muted-foreground">
+                  {uploadedImage ? "Scanning medicine photo..." : "Searching database..."}
+                </p>
               </div>
             )}
 
-            {medicineInfo && (
+            {/* Multiple Matches */}
+            {medicineMatches.length > 1 && (
+              <div className="space-y-4 mb-6">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-orange-500" />
+                  <span className="font-medium">Multiple matches found - Select the correct one:</span>
+                </div>
+                <div className="space-y-2">
+                  {medicineMatches.map((match, index) => (
+                    <div
+                      key={index}
+                      className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                        selectedMatch === match 
+                          ? 'border-primary bg-primary/5' 
+                          : 'border-gray-200 hover:border-primary/50'
+                      }`}
+                      onClick={() => selectMatch(match)}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-medium">{match.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {match.genericName} • {match.manufacturer}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={getConfidenceBadgeVariant(match.confidence)}>
+                            {match.confidence}%
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            <Database className="h-3 w-3 mr-1" />
+                            {match.source}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <Separator />
+              </div>
+            )}
+
+            {/* Selected Medicine Details */}
+            {selectedMatch && (
               <div className="space-y-6">
                 {/* Medicine Name & Confidence */}
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xl font-bold text-primary">{medicineInfo.name}</h3>
-                    <Badge 
-                      variant={medicineInfo.confidence > 90 ? "default" : "secondary"}
-                      className="bg-green-100 text-green-800"
-                    >
-                      {medicineInfo.confidence}% confidence
-                    </Badge>
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <h3 className="text-xl font-bold text-primary">{selectedMatch.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={getConfidenceBadgeVariant(selectedMatch.confidence)}>
+                        <Star className="h-3 w-3 mr-1" />
+                        {selectedMatch.confidence}% confidence
+                      </Badge>
+                      <Badge variant="outline">
+                        <Database className="h-3 w-3 mr-1" />
+                        {selectedMatch.source}
+                      </Badge>
+                    </div>
                   </div>
                   <p className="text-muted-foreground">
-                    Generic: {medicineInfo.genericName} | Manufacturer: {medicineInfo.manufacturer}
+                    <strong>Generic:</strong> {selectedMatch.genericName} • <strong>Manufacturer:</strong> {selectedMatch.manufacturer}
                   </p>
+                  
+                  {selectedMatch.isRecalled && (
+                    <Alert variant="destructive">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        <strong>WARNING:</strong> This medicine may have been recalled. Please verify with your healthcare provider.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  <Alert>
+                    <Clock className="h-4 w-4" />
+                    <AlertDescription>
+                      <strong>Expiry Status:</strong> {selectedMatch.expiryStatus}
+                    </AlertDescription>
+                  </Alert>
                 </div>
 
                 <Separator />
 
                 {/* Active Ingredients */}
-                <div>
-                  <h4 className="font-semibold mb-2 flex items-center gap-2">
-                    <Zap className="h-4 w-4 text-orange-500" />
-                    Active Ingredients
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {medicineInfo.activeIngredients.map((ingredient, index) => (
-                      <Badge key={index} variant="outline">
-                        {ingredient}
-                      </Badge>
-                    ))}
+                {selectedMatch.activeIngredients.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-2 flex items-center gap-2">
+                      <Zap className="h-4 w-4 text-orange-500" />
+                      Active Ingredients
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedMatch.activeIngredients.map((ingredient, index) => (
+                        <Badge key={index} variant="outline">
+                          {ingredient}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Uses */}
-                <div>
-                  <h4 className="font-semibold mb-2 flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    Medical Uses
-                  </h4>
-                  <ul className="space-y-1 text-sm">
-                    {medicineInfo.uses.map((use, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <span className="text-green-500 mt-1">•</span>
-                        {use}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                {selectedMatch.uses.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-2 flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      Medical Uses
+                    </h4>
+                    <ul className="space-y-1 text-sm">
+                      {selectedMatch.uses.map((use, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <span className="text-green-500 mt-1">•</span>
+                          {use}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
                 {/* Dosage */}
                 <div>
@@ -367,46 +453,55 @@ export const MedicineScanner = ({ user }: MedicineScannerProps) => {
                     Recommended Dosage
                   </h4>
                   <p className="text-sm bg-blue-50 p-3 rounded-lg border border-blue-200">
-                    {medicineInfo.dosage}
+                    {selectedMatch.dosage}
                   </p>
                 </div>
 
                 {/* Side Effects */}
-                <div>
-                  <h4 className="font-semibold mb-2 flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-orange-500" />
-                    Possible Side Effects
-                  </h4>
-                  <ul className="space-y-1 text-sm">
-                    {medicineInfo.sideEffects.map((effect, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <span className="text-orange-500 mt-1">•</span>
-                        {effect}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                {selectedMatch.sideEffects.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-2 flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-orange-500" />
+                      Possible Side Effects
+                    </h4>
+                    <ul className="space-y-1 text-sm">
+                      {selectedMatch.sideEffects.map((effect, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <span className="text-orange-500 mt-1">•</span>
+                          {effect}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
                 {/* Precautions */}
-                <div>
-                  <h4 className="font-semibold mb-2 flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-red-500" />
-                    Important Precautions
-                  </h4>
-                  <ul className="space-y-1 text-sm">
-                    {medicineInfo.precautions.map((precaution, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <span className="text-red-500 mt-1">•</span>
-                        {precaution}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                {selectedMatch.precautions.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-2 flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-red-500" />
+                      Important Precautions
+                    </h4>
+                    <ul className="space-y-1 text-sm">
+                      {selectedMatch.precautions.map((precaution, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <span className="text-red-500 mt-1">•</span>
+                          {precaution}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
                 <Alert>
                   <Info className="h-4 w-4" />
-                  <AlertDescription>
-                    This information is for educational purposes only. Always consult a healthcare professional before taking any medication.
+                  <AlertDescription className="space-y-2">
+                    <p>This information is sourced from official medical databases and is for educational purposes only.</p>
+                    <p><strong>Always consult a healthcare professional before taking any medication.</strong></p>
+                    <div className="flex items-center gap-1 text-xs">
+                      <ExternalLink className="h-3 w-3" />
+                      <span>Data from: FDA OpenFDA, RxNorm, NIH</span>
+                    </div>
                   </AlertDescription>
                 </Alert>
               </div>
