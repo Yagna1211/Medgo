@@ -57,16 +57,18 @@ export const MedicineScanner = ({ user }: MedicineScannerProps) => {
   const [showManualSearch, setShowManualSearch] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // On-device OCR fallback using Tesseract.js
-  const ocrWithTesseract = async (file: File): Promise<string> => {
-    const dataUrl = await new Promise<string>((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.readAsDataURL(file);
-    });
-    const result = await Tesseract.recognize(dataUrl, 'eng');
-    return result.data.text;
-  };
+// On-device OCR using Tesseract.js (tuned for labels)
+const ocrWithTesseract = async (file: File): Promise<string> => {
+  const dataUrl = await new Promise<string>((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.readAsDataURL(file);
+  });
+  const result = await Tesseract.recognize(dataUrl, 'eng', {
+    tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789- ',
+  });
+  return result.data.text;
+};
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -85,13 +87,27 @@ export const MedicineScanner = ({ user }: MedicineScannerProps) => {
     }
   };
 
-  const startAnalysis = async () => {
-    if (!selectedFile) {
-      toast("Please upload an image first.");
-      return;
+const startAnalysis = async () => {
+  if (!selectedFile) {
+    toast("Please upload an image first.");
+    return;
+  }
+  // Prefer on-device OCR to avoid server OCR billing issues
+  setIsAnalyzing(true);
+  try {
+    const text = await ocrWithTesseract(selectedFile);
+    if (text && text.length > 3) {
+      await analyzeMedicine(null, text);
+    } else {
+      throw new Error('Could not read text from image');
     }
+  } catch (e: any) {
+    toast(`OCR failed: ${e.message}. Falling back to server...`);
     await analyzeMedicine(selectedFile);
-  };
+  } finally {
+    setIsAnalyzing(false);
+  }
+};
 
   const startManualSearch = async () => {
     if (!manualSearchTerm.trim()) {

@@ -160,32 +160,48 @@ serve(async (req) => {
 
 // Helper function to extract potential medicine names from text
 function extractMedicineNames(text: string): string[] {
-  const lines = text.split(/\n|\r/).map(line => line.trim()).filter(Boolean);
-  const candidates = new Set<string>();
+  const STOP_WORDS = [
+    'spf', 'pa+++', 'directions', 'for external use', 'powder', 'lotion', 'cream',
+    'warning', 'warnings', 'usage', 'indications', 'dosage', 'ingredients', 'sunscreen'
+  ];
+
+  const lines = text
+    .split(/\n|\r/)
+    .map(l => l.trim())
+    .filter(Boolean)
+    // remove lines that obviously aren't brand names
+    .filter(l => !/^\d/.test(l))
+    .filter(l => !STOP_WORDS.some(sw => l.toLowerCase().includes(sw)))
+    .slice(0, 50);
+
+  const wordCandidates = new Set<string>();
+  const lineCandidates = new Set<string>();
 
   for (const line of lines) {
-    // Look for medicine-like patterns
-    const words = line.split(/\s+/).filter(word => word.length > 2);
-    
-    for (const word of words) {
-      // Clean the word (remove non-alphanumeric except hyphens)
-      const cleaned = word.replace(/[^a-zA-Z0-9\-]/g, '');
-      
-      if (cleaned.length >= 3 && /[a-zA-Z]/.test(cleaned)) {
-        candidates.add(cleaned);
-        
-        // Also add capitalized version
-        candidates.add(cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase());
-      }
+    const words = line.split(/\s+/).map(w => w.replace(/[^a-zA-Z0-9\-]/g, ''));
+
+    // collect strong single-word candidates (brand-like)
+    for (const w of words) {
+      if (!w) continue;
+      const isAlpha = /[a-zA-Z]/.test(w);
+      const validLen = w.length >= 3 && w.length <= 20;
+      const looksBrand = /^[A-Z][a-zA-Z0-9\-]+$/.test(w) || /^[A-Z]{3,}$/.test(w);
+      if (isAlpha && validLen && looksBrand) wordCandidates.add(w);
     }
-    
-    // Also check for multi-word medicine names
-    if (line.length > 3 && line.length < 50 && /^[a-zA-Z0-9\s\-]+$/.test(line)) {
-      candidates.add(line);
+
+    // collect short multi-word candidates (1-3 words)
+    const cleanLine = words.filter(Boolean).join(' ');
+    const wordCount = cleanLine.split(' ').length;
+    if (cleanLine && wordCount <= 3 && /^[A-Za-z0-9\-\s]+$/.test(cleanLine)) {
+      lineCandidates.add(cleanLine);
     }
   }
 
-  return Array.from(candidates).slice(0, 10); // Limit to top 10 candidates
+  // prioritize single-word brand-like names, then short phrases
+  const candidates = Array.from(wordCandidates).concat(Array.from(lineCandidates));
+  // de-dup case-insensitively
+  const unique = Array.from(new Map(candidates.map(c => [c.toLowerCase(), c])).values());
+  return unique.slice(0, 10);
 }
 
 // Helper function to lookup medicine in various databases
@@ -220,29 +236,34 @@ async function searchOpenFDA(medicineName: string): Promise<MedicineMatch[]> {
     `openfda.generic_name:${medicineName}`
   ];
 
-  for (const query of queries) {
-    try {
-      const url = `https://api.fda.gov/drug/label.json?search=${encodeURIComponent(query)}&limit=3`;
-      console.log('Searching FDA:', url);
+for (const query of queries) {
+  try {
+    const url = `https://api.fda.gov/drug/label.json?search=${encodeURIComponent(query)}&limit=3`;
+    console.log('Searching FDA:', url);
+    
+    const response = await fetch(url);
+    
+    if (response.ok) {
+      const data = await response.json();
       
-      const response = await fetch(url);
-      
-      if (response.ok) {
-        const data = await response.json();
-        
-        if (data.results && data.results.length > 0) {
-          for (const result of data.results) {
-            const match = parseOpenFDAResult(result, medicineName);
-            if (match) {
-              matches.push(match);
-            }
+      if (data.results && data.results.length > 0) {
+        for (const result of data.results) {
+          const match = parseOpenFDAResult(result, medicineName);
+          if (match) {
+            // Check recall status via enforcement API
+            try {
+              const nameForRecall = match.name || match.genericName || medicineName;
+              match.isRecalled = await checkRecallStatusApi(nameForRecall);
+            } catch (_e) {}
+            matches.push(match);
           }
         }
       }
-    } catch (error) {
-      console.log(`FDA query failed: ${query}`, error.message);
     }
+  } catch (error) {
+    console.log(`FDA query failed: ${query}`, (error as any).message);
   }
+}
 
   return matches;
 }
@@ -350,14 +371,22 @@ function parseStringArray(data: any): string[] {
     .slice(0, 5);
 }
 
-// Simple recall status check
-function checkRecallStatus(openfda: any): boolean {
-  // This is a simplified check - in production, you'd query FDA recall database
-  const recallKeywords = ['recall', 'withdrawn', 'discontinued'];
-  const productNdc = openfda.product_ndc?.[0] || '';
-  
-  // This is just a placeholder - real implementation would check recall databases
+// Simple recall keyword presence fallback (kept for compatibility)
+function checkRecallStatus(_openfda: any): boolean {
   return false;
+}
+
+// Query FDA enforcement (recall) API for a product name
+async function checkRecallStatusApi(name: string): Promise<boolean> {
+  try {
+    const url = `https://api.fda.gov/drug/enforcement.json?search=product_description:%22${encodeURIComponent(name)}%22&limit=1`;
+    const res = await fetch(url);
+    if (!res.ok) return false;
+    const data = await res.json();
+    return Array.isArray(data.results) && data.results.length > 0;
+  } catch (_e) {
+    return false;
+  }
 }
 
 // Remove duplicate matches

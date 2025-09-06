@@ -42,10 +42,10 @@ const Index = () => {
     );
   }
 
-  // If user is logged in and wants to access a feature, show the dashboard
-  if (user && activeView !== 'home') {
-    return <Dashboard user={user} onLogout={signOut} initialView={activeView} />;
-  }
+// If user is logged in, take them to their dashboard (role-based)
+if (user) {
+  return <Dashboard user={user} onLogout={signOut} initialView={activeView !== 'home' ? activeView : undefined} />;
+}
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
