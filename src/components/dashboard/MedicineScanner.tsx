@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import Tesseract from "tesseract.js";
 
 interface MedicineMatch {
   name: string;
@@ -55,6 +56,17 @@ export const MedicineScanner = ({ user }: MedicineScannerProps) => {
   const [manualSearchTerm, setManualSearchTerm] = useState<string>('');
   const [showManualSearch, setShowManualSearch] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // On-device OCR fallback using Tesseract.js
+  const ocrWithTesseract = async (file: File): Promise<string> => {
+    const dataUrl = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.readAsDataURL(file);
+    });
+    const result = await Tesseract.recognize(dataUrl, 'eng');
+    return result.data.text;
+  };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -139,7 +151,41 @@ export const MedicineScanner = ({ user }: MedicineScannerProps) => {
       }
 
     } catch (error: any) {
-      console.error('Analysis error:', error);
+      console.error('Analysis error (Vision):', error);
+
+      // Fallback to client-side OCR with Tesseract if we have a file
+      if (file) {
+        try {
+          toast("Server OCR failed. Trying on-device OCR...");
+          const tesseractText = await ocrWithTesseract(file);
+
+          if (tesseractText && tesseractText.length > 3) {
+            const { data: fallbackData, error: fallbackError } = await supabase.functions.invoke('analyze-medicine', {
+              body: {
+                imageBase64: '',
+                userId: user.id,
+                manualSearch: tesseractText
+              }
+            });
+
+            if (fallbackError) throw fallbackError;
+
+            if (fallbackData?.matches?.length) {
+              setMedicineMatches(fallbackData.matches);
+              setSelectedMatch(fallbackData.matches[0]);
+              setExtractedText(fallbackData.extractedText || tesseractText);
+              toast("On-device OCR succeeded. Please verify the match.");
+              return;
+            } else {
+              throw new Error(fallbackData?.suggestion || 'No matches found after OCR');
+            }
+          }
+        } catch (fallbackErr: any) {
+          console.error('Fallback OCR error:', fallbackErr);
+          toast(`OCR fallback failed: ${fallbackErr.message}`);
+        }
+      }
+
       toast(`Analysis failed: ${error.message}`);
       setShowManualSearch(true);
     } finally {
