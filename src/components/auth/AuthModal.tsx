@@ -120,17 +120,7 @@ const handleSignUp = async (e: React.FormEvent) => {
 
 const resetForms = () => {
   setSignInData({ email: '', password: '' });
-  setSignUpData({ 
-    firstName: '', 
-    lastName: '', 
-    email: '', 
-    password: '', 
-    confirmPassword: '', 
-    role: 'customer', 
-    ambulanceNumber: '', 
-    vehicleDetails: '', 
-    serviceArea: '' 
-  });
+  setSignUpData({ firstName: '', lastName: '', email: '', password: '', confirmPassword: '', role: 'customer', ambulanceNumber: '', vehicleDetails: '', serviceArea: '' });
   setError('');
 };
 
