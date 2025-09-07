@@ -17,10 +17,15 @@ import {
   Shield,
   Save,
   Camera,
-  Edit3
+  Edit3,
+  Download,
+  Key
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { ChangePasswordModal } from "@/components/auth/ChangePasswordModal";
+import { TwoFactorModal } from "@/components/auth/TwoFactorModal";
 
 interface UserProfileProps {
   user: any;
@@ -29,6 +34,8 @@ interface UserProfileProps {
 export const UserProfile = ({ user }: UserProfileProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [showTwoFactor, setShowTwoFactor] = useState(false);
   const [profileData, setProfileData] = useState({
     firstName: "",
     lastName: "",
@@ -49,6 +56,7 @@ export const UserProfile = ({ user }: UserProfileProps) => {
     }
   });
   const { toast } = useToast();
+  const { downloadUserData } = useAuth();
 
   useEffect(() => {
     fetchProfile();
@@ -460,16 +468,34 @@ export const UserProfile = ({ user }: UserProfileProps) => {
             <div>
               <h4 className="font-semibold mb-4">Account Security</h4>
               <div className="space-y-3">
-                <Button variant="outline" className="w-full justify-start">
-                  <Shield className="h-4 w-4 mr-2" />
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => setShowChangePassword(true)}
+                >
+                  <Key className="h-4 w-4 mr-2" />
                   Change Password
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => setShowTwoFactor(true)}
+                >
                   <Shield className="h-4 w-4 mr-2" />
                   Two-Factor Authentication
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <Shield className="h-4 w-4 mr-2" />
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => {
+                    downloadUserData();
+                    toast({
+                      title: "Download Started",
+                      description: "Your data export will download shortly"
+                    });
+                  }}
+                >
+                  <Download className="h-4 w-4 mr-2" />
                   Download My Data
                 </Button>
               </div>
@@ -498,6 +524,16 @@ export const UserProfile = ({ user }: UserProfileProps) => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Modals */}
+      <ChangePasswordModal 
+        isOpen={showChangePassword} 
+        onClose={() => setShowChangePassword(false)} 
+      />
+      <TwoFactorModal 
+        isOpen={showTwoFactor} 
+        onClose={() => setShowTwoFactor(false)} 
+      />
     </div>
   );
 };
