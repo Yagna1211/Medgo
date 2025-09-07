@@ -99,9 +99,15 @@ serve(async (req) => {
     const uniqueMatches = removeDuplicates(possibleMatches);
     uniqueMatches.sort((a, b) => b.confidence - a.confidence);
 
-    console.log(`Found ${uniqueMatches.length} potential matches`);
+    // Filter results based on confidence thresholds
+    const highConfidenceMatches = uniqueMatches.filter(m => m.confidence >= 80);
+    const finalMatches = highConfidenceMatches.length > 0 ? 
+      (highConfidenceMatches.length === 1 ? highConfidenceMatches : uniqueMatches) : 
+      uniqueMatches;
 
-    if (uniqueMatches.length === 0) {
+    console.log(`Found ${finalMatches.length} potential matches`);
+
+    if (finalMatches.length === 0) {
       return new Response(
         JSON.stringify({ 
           error: 'No medicine matches found',
@@ -116,7 +122,7 @@ serve(async (req) => {
     }
 
     // Step 5: Save the best match to database
-    const bestMatch = uniqueMatches[0];
+    const bestMatch = finalMatches[0];
     if (bestMatch.confidence > 0.7) {
       const supabase = createClient(
         Deno.env.get('SUPABASE_URL') ?? '',
@@ -139,9 +145,9 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ 
-        matches: uniqueMatches.slice(0, 5), // Return top 5 matches
+        matches: finalMatches.slice(0, 5), // Return top 5 matches
         extractedText: extractedText,
-        totalFound: uniqueMatches.length
+        totalFound: finalMatches.length
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
@@ -160,48 +166,77 @@ serve(async (req) => {
 
 // Helper function to extract potential medicine names from text
 function extractMedicineNames(text: string): string[] {
+  const BRAND_TO_GENERIC = {
+    'paracetamol': 'acetaminophen',
+    'paracemeter': 'acetaminophen',
+    'tylenol': 'acetaminophen',
+    'calpol': 'acetaminophen',
+    'aspirin': 'acetylsalicylic acid',
+    'disprin': 'acetylsalicylic acid',
+    'ibuprofen': 'ibuprofen',
+    'advil': 'ibuprofen',
+    'motrin': 'ibuprofen',
+    'nurofen': 'ibuprofen'
+  };
+
   const STOP_WORDS = [
     'spf', 'pa+++', 'directions', 'for external use', 'powder', 'lotion', 'cream',
-    'warning', 'warnings', 'usage', 'indications', 'dosage', 'ingredients', 'sunscreen'
+    'warning', 'warnings', 'usage', 'indications', 'dosage', 'ingredients', 'sunscreen',
+    'tablets', 'capsules', 'mg', 'ml', 'gm', 'per', 'each', 'contains'
   ];
 
   const lines = text
     .split(/\n|\r/)
     .map(l => l.trim())
     .filter(Boolean)
-    // remove lines that obviously aren't brand names
-    .filter(l => !/^\d/.test(l))
+    .filter(l => !/^\d+\s*mg|^\d+\s*ml|^\d+\s*gm/i.test(l))
     .filter(l => !STOP_WORDS.some(sw => l.toLowerCase().includes(sw)))
-    .slice(0, 50);
+    .slice(0, 30);
 
-  const wordCandidates = new Set<string>();
-  const lineCandidates = new Set<string>();
+  const candidates = new Set<string>();
 
+  // Primary extraction - look for medicine names
   for (const line of lines) {
-    const words = line.split(/\s+/).map(w => w.replace(/[^a-zA-Z0-9\-]/g, ''));
+    const cleanLine = line.replace(/[^\w\s-]/g, ' ').trim();
+    const words = cleanLine.split(/\s+/).filter(w => w.length >= 3);
 
-    // collect strong single-word candidates (brand-like)
-    for (const w of words) {
-      if (!w) continue;
-      const isAlpha = /[a-zA-Z]/.test(w);
-      const validLen = w.length >= 3 && w.length <= 20;
-      const looksBrand = /^[A-Z][a-zA-Z0-9\-]+$/.test(w) || /^[A-Z]{3,}$/.test(w);
-      if (isAlpha && validLen && looksBrand) wordCandidates.add(w);
+    // Look for single strong medicine names
+    for (const word of words) {
+      const normalized = word.toLowerCase();
+      if (BRAND_TO_GENERIC[normalized]) {
+        candidates.add(normalized);
+        candidates.add(BRAND_TO_GENERIC[normalized]);
+      }
+      
+      // Check if it looks like a medicine name
+      if (/^[a-zA-Z]{4,15}$/.test(word) && 
+          !STOP_WORDS.includes(normalized) &&
+          !/^(tablet|capsule|syrup|cream|gel)s?$/i.test(word)) {
+        candidates.add(word);
+      }
     }
 
-    // collect short multi-word candidates (1-3 words)
-    const cleanLine = words.filter(Boolean).join(' ');
-    const wordCount = cleanLine.split(' ').length;
-    if (cleanLine && wordCount <= 3 && /^[A-Za-z0-9\-\s]+$/.test(cleanLine)) {
-      lineCandidates.add(cleanLine);
+    // Look for compound names (up to 2 words)
+    if (words.length >= 2 && words.length <= 3) {
+      const compound = words.slice(0, 2).join(' ');
+      if (/^[a-zA-Z\s-]{5,25}$/.test(compound)) {
+        candidates.add(compound);
+      }
     }
   }
 
-  // prioritize single-word brand-like names, then short phrases
-  const candidates = Array.from(wordCandidates).concat(Array.from(lineCandidates));
-  // de-dup case-insensitively
-  const unique = Array.from(new Map(candidates.map(c => [c.toLowerCase(), c])).values());
-  return unique.slice(0, 10);
+  // Convert to array and prioritize known medicines
+  const candidateArray = Array.from(candidates);
+  const knownMedicines = candidateArray.filter(c => 
+    Object.keys(BRAND_TO_GENERIC).includes(c.toLowerCase()) ||
+    Object.values(BRAND_TO_GENERIC).includes(c.toLowerCase())
+  );
+  
+  const otherCandidates = candidateArray.filter(c => 
+    !knownMedicines.some(k => k.toLowerCase() === c.toLowerCase())
+  );
+
+  return [...knownMedicines, ...otherCandidates].slice(0, 8);
 }
 
 // Helper function to lookup medicine in various databases
@@ -324,22 +359,48 @@ function parseOpenFDAResult(result: any, searchTerm: string): MedicineMatch | nu
   const genericName = openfda.generic_name?.[0] || '';
   const manufacturer = openfda.manufacturer_name?.[0] || 'N/A';
   
-  // Calculate confidence based on name match
+  // Enhanced confidence calculation with brand-generic mapping
   let confidence = 60;
   const searchLower = searchTerm.toLowerCase();
   const brandLower = brandName.toLowerCase();
   const genericLower = genericName.toLowerCase();
   
+  // Check for exact matches or known mappings
+  const BRAND_MAPPINGS: { [key: string]: string[] } = {
+    'paracetamol': ['acetaminophen', 'tylenol'],
+    'paracemeter': ['acetaminophen', 'tylenol'],
+    'acetaminophen': ['paracetamol', 'tylenol'],
+    'aspirin': ['acetylsalicylic acid'],
+    'ibuprofen': ['advil', 'motrin', 'nurofen']
+  };
+
+  // Exact match gets highest confidence
   if (brandLower === searchLower || genericLower === searchLower) {
     confidence = 95;
-  } else if (brandLower.includes(searchLower) || genericLower.includes(searchLower)) {
+  } 
+  // Check if search term maps to this medicine's names
+  else if (BRAND_MAPPINGS[searchLower]?.some(mapped => 
+    brandLower.includes(mapped) || genericLower.includes(mapped) ||
+    mapped.includes(brandLower) || mapped.includes(genericLower)
+  )) {
+    confidence = 92;
+  }
+  // Partial matches
+  else if (brandLower.includes(searchLower) || genericLower.includes(searchLower) ||
+           searchLower.includes(brandLower) || searchLower.includes(genericLower)) {
     confidence = 85;
-  } else if (searchLower.includes(brandLower) || searchLower.includes(genericLower)) {
-    confidence = 75;
+  }
+  // Check substance names for active ingredients
+  else if (openfda.substance_name?.some((substance: string) => 
+    substance.toLowerCase().includes(searchLower) || searchLower.includes(substance.toLowerCase())
+  )) {
+    confidence = 80;
   }
 
-  // Check for recalls (simplified check)
-  const isRecalled = checkRecallStatus(openfda);
+  // Boost confidence for high-quality results
+  if (brandName && genericName && manufacturer !== 'N/A') {
+    confidence = Math.min(confidence + 5, 95);
+  }
 
   return {
     name: brandName || genericName || searchTerm,
@@ -350,7 +411,7 @@ function parseOpenFDAResult(result: any, searchTerm: string): MedicineMatch | nu
     dosage: parseStringArray(result.dosage_and_administration)?.[0] || 'Consult healthcare provider',
     sideEffects: parseStringArray(result.adverse_reactions),
     precautions: parseStringArray(result.warnings_and_precautions || result.warnings),
-    isRecalled,
+    isRecalled: false, // Will be set by recall check
     expiryStatus: 'Check package for expiry date',
     confidence,
     source: 'OpenFDA'

@@ -65,7 +65,7 @@ const ocrWithTesseract = async (file: File): Promise<string> => {
     reader.readAsDataURL(file);
   });
   const result = await Tesseract.recognize(dataUrl, 'eng', {
-    tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789- ',
+    logger: m => console.log(m)
   });
   return result.data.text;
 };
