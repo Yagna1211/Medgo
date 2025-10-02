@@ -54,7 +54,7 @@ Please provide the response in this exact JSON structure:
 
 Provide 2-4 possible conditions based on the symptoms. Focus on common conditions but also mention when serious conditions should be ruled out.`
 
-    const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`, {
+    const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
