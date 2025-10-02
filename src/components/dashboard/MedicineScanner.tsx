@@ -70,11 +70,11 @@ const ocrWithTesseract = async (file: File): Promise<string> => {
   return result.data.text;
 };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         setUploadedImage(e.target?.result as string);
         setSelectedFile(file);
         // Reset previous results
@@ -82,8 +82,31 @@ const ocrWithTesseract = async (file: File): Promise<string> => {
         setSelectedMatch(null);
         setExtractedText('');
         setShowManualSearch(false);
+        
+        // Auto-start analysis immediately after upload
+        toast("Analyzing medicine image...");
+        setTimeout(async () => {
+          await autoAnalyze(file);
+        }, 100);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const autoAnalyze = async (file: File) => {
+    setIsAnalyzing(true);
+    try {
+      const text = await ocrWithTesseract(file);
+      if (text && text.length > 3) {
+        await analyzeMedicine(null, text);
+      } else {
+        await analyzeMedicine(file);
+      }
+    } catch (e: any) {
+      console.error('Auto-analysis error:', e);
+      await analyzeMedicine(file);
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -151,29 +174,31 @@ const startAnalysis = async () => {
       }
 
       if (data.matches && data.matches.length > 0) {
-        // Filter matches - only show if confidence is reasonable (>40%) or if it's manual search
-        const validMatches = manualSearch 
-          ? data.matches.filter((m: MedicineMatch) => m.confidence > 40)
-          : data.matches.filter((m: MedicineMatch) => m.confidence > 50);
+        // For automatic scanning, be more strict with confidence
+        const confidenceThreshold = manualSearch ? 40 : 60;
+        const validMatches = data.matches.filter((m: MedicineMatch) => m.confidence > confidenceThreshold);
 
         if (validMatches.length === 0) {
           setMedicineMatches([]);
           setSelectedMatch(null);
-          toast.error("Medicine not found in database. Please try a different image or search manually.");
+          toast.error("Medicine not found in database. Please try manual search or upload a clearer image.");
           setShowManualSearch(true);
           return;
         }
 
+        // Sort by confidence to ensure the best match is first
+        validMatches.sort((a: MedicineMatch, b: MedicineMatch) => b.confidence - a.confidence);
+
         setMedicineMatches(validMatches);
-        setSelectedMatch(validMatches[0]); // Select the highest confidence match
+        setSelectedMatch(validMatches[0]);
         setExtractedText(data.extractedText || '');
         
         if (validMatches[0].confidence > 90) {
-          toast.success("High confidence match found! Medicine identified successfully.");
+          toast.success(`✓ ${validMatches[0].name} identified with ${validMatches[0].confidence}% confidence!`);
         } else if (validMatches[0].confidence > 70) {
-          toast("Medicine identified with good confidence. Please verify the match.");
+          toast(`Medicine identified: ${validMatches[0].name}. Please verify the information.`);
         } else {
-          toast("Possible matches found. Please verify the information carefully.");
+          toast(`Possible match: ${validMatches[0].name}. Please verify carefully.`);
         }
       } else {
         setMedicineMatches([]);
@@ -289,28 +314,16 @@ const startAnalysis = async () => {
                     alt="Uploaded medicine" 
                     className="max-h-48 mx-auto rounded-lg shadow-md"
                   />
-                  <div className="flex gap-2 justify-center flex-wrap">
-                    <Button 
-                      onClick={startAnalysis}
-                      disabled={isAnalyzing}
-                      className="flex items-center gap-2"
-                    >
-                      {isAnalyzing ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Analyzing...
-                        </>
-                      ) : (
-                        <>
-                          <Search className="h-4 w-4" />
-                          Scan Medicine
-                        </>
-                      )}
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={triggerFileInput}>
+                  {isAnalyzing ? (
+                    <div className="flex items-center justify-center gap-2 text-primary">
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      <span className="font-medium">Analyzing medicine...</span>
+                    </div>
+                  ) : (
+                    <Button variant="outline" size="sm" onClick={triggerFileInput} className="w-full">
                       Upload Different Image
                     </Button>
-                  </div>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-4">
