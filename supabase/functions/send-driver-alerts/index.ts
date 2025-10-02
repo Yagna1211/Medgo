@@ -50,9 +50,10 @@ serve(async (req) => {
     if (nearbyDrivers.length === 0) {
       return new Response(JSON.stringify({ 
         success: false, 
-        message: 'No available drivers found nearby' 
+        message: 'No available drivers found nearby. Please call 108 for emergency services.',
+        driversNotified: 0
       }), {
-        status: 404,
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -81,11 +82,22 @@ serve(async (req) => {
       });
     }
 
+    // Fetch driver phone numbers from profiles
+    const driverIds = nearbyDrivers.slice(0, 3).map(d => d.driver_id);
+    const { data: driverProfiles } = await supabase
+      .from('profiles')
+      .select('user_id, phone')
+      .in('user_id', driverIds);
+
     // Send SMS to nearest drivers (max 3)
     const smsPromises = nearbyDrivers.slice(0, 3).map(async (driver) => {
-      if (!driver.phone) return null;
+      const driverProfile = driverProfiles?.find(p => p.user_id === driver.driver_id);
+      if (!driverProfile?.phone) {
+        console.log(`No phone number for driver ${driver.driver_id}`);
+        return null;
+      }
 
-      const cleanPhone = driver.phone.replace(/^\+?91/, '').replace(/\D/g, '');
+      const cleanPhone = driverProfile.phone.replace(/^\+?91/, '').replace(/\D/g, '');
       
       if (cleanPhone.length !== 10) {
         console.log(`Invalid phone number for driver ${driver.user_id}: ${driver.phone}`);
