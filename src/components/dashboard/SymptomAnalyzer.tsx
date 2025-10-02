@@ -38,17 +38,49 @@ interface SymptomAnalyzerProps {
   user: any;
 }
 
+// Common symptoms for autocomplete suggestions
+const COMMON_SYMPTOMS = [
+  "headache", "fever", "cough", "sore throat", "runny nose", "fatigue", "nausea", 
+  "vomiting", "diarrhea", "stomach pain", "chest pain", "shortness of breath",
+  "dizziness", "muscle aches", "joint pain", "back pain", "rash", "itching",
+  "chills", "sweating", "loss of appetite", "weight loss", "anxiety", "depression"
+];
+
 export const SymptomAnalyzer = ({ user }: SymptomAnalyzerProps) => {
   const [symptoms, setSymptoms] = useState<string[]>([]);
   const [currentSymptom, setCurrentSymptom] = useState("");
   const [additionalInfo, setAdditionalInfo] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<SymptomAnalysis | null>(null);
+  const [symptomSuggestions, setSymptomSuggestions] = useState<string[]>([]);
 
   const addSymptom = () => {
     if (currentSymptom.trim() && !symptoms.includes(currentSymptom.trim())) {
       setSymptoms([...symptoms, currentSymptom.trim()]);
       setCurrentSymptom("");
+      setSymptomSuggestions([]);
+    }
+  };
+
+  const handleSymptomInputChange = (value: string) => {
+    setCurrentSymptom(value);
+    
+    if (value.trim().length > 0) {
+      const filtered = COMMON_SYMPTOMS.filter(symptom => 
+        symptom.toLowerCase().includes(value.toLowerCase()) &&
+        !symptoms.includes(symptom)
+      ).slice(0, 5);
+      setSymptomSuggestions(filtered);
+    } else {
+      setSymptomSuggestions([]);
+    }
+  };
+
+  const selectSuggestion = (suggestion: string) => {
+    if (!symptoms.includes(suggestion)) {
+      setSymptoms([...symptoms, suggestion]);
+      setCurrentSymptom("");
+      setSymptomSuggestions([]);
     }
   };
 
@@ -79,9 +111,9 @@ export const SymptomAnalyzer = ({ user }: SymptomAnalyzerProps) => {
         throw new Error(error.message || 'Failed to analyze symptoms');
       }
 
-      // Transform the API response to match our interface
+      // Transform the API response to match our interface - Keep only top 3 conditions
       const transformedAnalysis: SymptomAnalysis = {
-        conditions: data.conditions.map((condition: any) => ({
+        conditions: data.conditions.slice(0, 3).map((condition: any) => ({
           name: condition.name,
           probability: parseInt(condition.probability.replace(/[^\d]/g, '')) || 50,
           description: condition.description,
@@ -147,14 +179,29 @@ export const SymptomAnalyzer = ({ user }: SymptomAnalyzerProps) => {
             {/* Add Symptom */}
             <div className="space-y-2">
               <Label htmlFor="symptom">Add Symptom</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="symptom"
-                  placeholder="e.g., headache, fever, cough"
-                  value={currentSymptom}
-                  onChange={(e) => setCurrentSymptom(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && addSymptom()}
-                />
+              <div className="flex gap-2 relative">
+                <div className="flex-1 relative">
+                  <Input
+                    id="symptom"
+                    placeholder="e.g., headache, fever, cough"
+                    value={currentSymptom}
+                    onChange={(e) => handleSymptomInputChange(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && addSymptom()}
+                  />
+                  {symptomSuggestions.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-background border border-border rounded-md shadow-lg z-10 max-h-48 overflow-y-auto">
+                      {symptomSuggestions.map((suggestion, index) => (
+                        <div
+                          key={index}
+                          className="px-3 py-2 hover:bg-accent cursor-pointer text-sm"
+                          onClick={() => selectSuggestion(suggestion)}
+                        >
+                          {suggestion}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <Button onClick={addSymptom} size="sm" variant="outline">
                   <Plus className="h-4 w-4" />
                 </Button>

@@ -151,19 +151,35 @@ const startAnalysis = async () => {
       }
 
       if (data.matches && data.matches.length > 0) {
-        setMedicineMatches(data.matches);
-        setSelectedMatch(data.matches[0]); // Select the highest confidence match
+        // Filter matches - only show if confidence is reasonable (>40%) or if it's manual search
+        const validMatches = manualSearch 
+          ? data.matches.filter((m: MedicineMatch) => m.confidence > 40)
+          : data.matches.filter((m: MedicineMatch) => m.confidence > 50);
+
+        if (validMatches.length === 0) {
+          setMedicineMatches([]);
+          setSelectedMatch(null);
+          toast.error("Medicine not found in database. Please try a different image or search manually.");
+          setShowManualSearch(true);
+          return;
+        }
+
+        setMedicineMatches(validMatches);
+        setSelectedMatch(validMatches[0]); // Select the highest confidence match
         setExtractedText(data.extractedText || '');
         
-        if (data.matches[0].confidence > 90) {
-          toast("High confidence match found! Medicine identified successfully.");
-        } else if (data.matches[0].confidence > 70) {
+        if (validMatches[0].confidence > 90) {
+          toast.success("High confidence match found! Medicine identified successfully.");
+        } else if (validMatches[0].confidence > 70) {
           toast("Medicine identified with good confidence. Please verify the match.");
         } else {
-          toast("Multiple possible matches found. Please select the correct one.");
+          toast("Possible matches found. Please verify the information carefully.");
         }
       } else {
-        throw new Error(data.suggestion || 'No medicine matches found');
+        setMedicineMatches([]);
+        setSelectedMatch(null);
+        toast.error("Medicine not found in database. Please try manual search or upload a clearer image.");
+        setShowManualSearch(true);
       }
 
     } catch (error: any) {
@@ -514,7 +530,7 @@ const startAnalysis = async () => {
                     <Clock className="h-4 w-4 text-blue-500" />
                     Recommended Dosage
                   </h4>
-                  <p className="text-sm bg-blue-50 p-3 rounded-lg border border-blue-200">
+                  <p className="text-sm bg-secondary/20 text-foreground p-3 rounded-lg border border-border">
                     {selectedMatch.dosage}
                   </p>
                 </div>
