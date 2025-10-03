@@ -26,6 +26,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { ChangePasswordModal } from "@/components/auth/ChangePasswordModal";
 import { TwoFactorModal } from "@/components/auth/TwoFactorModal";
+import { OtpVerificationModal } from "@/components/auth/OtpVerificationModal";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { LogOut } from "lucide-react";
+import jsPDF from "jspdf";
 
 interface UserProfileProps {
   user: any;
@@ -36,6 +41,13 @@ export const UserProfile = ({ user }: UserProfileProps) => {
   const [loading, setLoading] = useState(true);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showTwoFactor, setShowTwoFactor] = useState(false);
+  const [showOtpVerification, setShowOtpVerification] = useState(false);
+  const [showSignOutDialog, setShowSignOutDialog] = useState(false);
+  const [stats, setStats] = useState({
+    memberSince: "",
+    totalScans: 0,
+    lastActivity: ""
+  });
   const [profileData, setProfileData] = useState({
     firstName: "",
     lastName: "",
@@ -56,11 +68,51 @@ export const UserProfile = ({ user }: UserProfileProps) => {
     }
   });
   const { toast } = useToast();
-  const { downloadUserData } = useAuth();
+  const { signOut } = useAuth();
 
   useEffect(() => {
     fetchProfile();
+    fetchStats();
   }, [user]);
+
+  const fetchStats = async () => {
+    try {
+      // Fetch total scans
+      const { data: medicineScans } = await supabase
+        .from('medicine_scans')
+        .select('id', { count: 'exact' })
+        .eq('user_id', user.id);
+
+      const { data: symptomAnalyses } = await supabase
+        .from('symptom_analyses')
+        .select('id', { count: 'exact' })
+        .eq('user_id', user.id);
+
+      const totalScans = (medicineScans?.length || 0) + (symptomAnalyses?.length || 0);
+
+      // Get member since date
+      const memberSince = new Date(user.created_at).toLocaleDateString('en-US', { 
+        month: 'long', 
+        year: 'numeric' 
+      });
+
+      // Get last activity
+      const allScans = [
+        ...(medicineScans || []),
+        ...(symptomAnalyses || [])
+      ];
+      
+      const lastActivity = allScans.length > 0 ? "Today" : "No activity";
+
+      setStats({
+        memberSince,
+        totalScans,
+        lastActivity
+      });
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+    }
+  };
 
   const fetchProfile = async () => {
     try {
@@ -172,11 +224,130 @@ export const UserProfile = ({ user }: UserProfileProps) => {
     }
   };
 
+  const downloadUserData = async () => {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      const { data: medicineScans } = await supabase
+        .from('medicine_scans')
+        .select('*')
+        .eq('user_id', user.id);
+
+      const { data: symptomAnalyses } = await supabase
+        .from('symptom_analyses')
+        .select('*')
+        .eq('user_id', user.id);
+
+      const { data: ambulanceBookings } = await supabase
+        .from('ambulance_bookings')
+        .select('*')
+        .eq('user_id', user.id);
+
+      // Create PDF
+      const pdf = new jsPDF();
+      
+      // Add logo/header
+      pdf.setFontSize(20);
+      pdf.setTextColor(0, 123, 255);
+      pdf.text("MEDGO", 170, 20);
+      
+      pdf.setFontSize(16);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text("User Data Export", 20, 20);
+      
+      pdf.setFontSize(10);
+      pdf.setTextColor(128, 128, 128);
+      pdf.text(`Export Date: ${new Date().toLocaleDateString()}`, 20, 30);
+      
+      // Profile Information
+      let yPos = 45;
+      pdf.setFontSize(14);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text("Profile Information", 20, yPos);
+      
+      yPos += 10;
+      pdf.setFontSize(10);
+      pdf.text(`Name: ${profile?.first_name} ${profile?.last_name}`, 20, yPos);
+      yPos += 7;
+      pdf.text(`Email: ${profile?.email}`, 20, yPos);
+      yPos += 7;
+      pdf.text(`Phone: ${profile?.phone || 'N/A'}`, 20, yPos);
+      yPos += 7;
+      pdf.text(`Member Since: ${stats.memberSince}`, 20, yPos);
+      
+      // Medicine Scans
+      yPos += 15;
+      pdf.setFontSize(14);
+      pdf.text(`Medicine Scans (${medicineScans?.length || 0})`, 20, yPos);
+      yPos += 10;
+      pdf.setFontSize(10);
+      
+      medicineScans?.slice(0, 5).forEach((scan: any) => {
+        if (yPos > 270) {
+          pdf.addPage();
+          yPos = 20;
+        }
+        pdf.text(`- ${scan.medicine_name || 'Unknown'} (${new Date(scan.created_at).toLocaleDateString()})`, 25, yPos);
+        yPos += 7;
+      });
+      
+      // Symptom Analyses
+      yPos += 10;
+      pdf.setFontSize(14);
+      pdf.text(`Symptom Analyses (${symptomAnalyses?.length || 0})`, 20, yPos);
+      yPos += 10;
+      pdf.setFontSize(10);
+      
+      symptomAnalyses?.slice(0, 5).forEach((analysis: any) => {
+        if (yPos > 270) {
+          pdf.addPage();
+          yPos = 20;
+        }
+        pdf.text(`- ${analysis.symptoms?.join(', ') || 'N/A'} (${new Date(analysis.created_at).toLocaleDateString()})`, 25, yPos);
+        yPos += 7;
+      });
+
+      // Save PDF
+      pdf.save(`medgo-user-data-${new Date().toISOString().split('T')[0]}.pdf`);
+      
+      toast({
+        title: "Data Downloaded",
+        description: "Your data has been downloaded as PDF",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Signed Out",
+        description: "You have been successfully signed out",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
   const accountStats = [
-    { label: "Member Since", value: "January 2024", icon: Calendar },
-    { label: "Total Scans", value: "47", icon: Camera },
+    { label: "Member Since", value: stats.memberSince, icon: Calendar },
+    { label: "Total Scans", value: stats.totalScans.toString(), icon: Camera },
     { label: "Account Status", value: "Active", icon: Shield },
-    { label: "Last Activity", value: "Today", icon: User }
+    { label: "Last Activity", value: stats.lastActivity, icon: User }
   ];
 
   if (loading) {
@@ -244,11 +415,19 @@ export const UserProfile = ({ user }: UserProfileProps) => {
           <CardContent className="space-y-4">
             {/* Profile Picture */}
             <div className="flex items-center space-x-4">
-              <div className="h-16 w-16 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center text-white text-xl font-bold">
-                {profileData.firstName[0]}{profileData.lastName[0]}
-              </div>
+              <Avatar className="h-16 w-16">
+                <AvatarImage src="" alt="Profile" />
+                <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white text-xl">
+                  {profileData.firstName[0]}{profileData.lastName[0]}
+                </AvatarFallback>
+              </Avatar>
               {isEditing && (
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={() => {
+                  toast({
+                    title: "Coming Soon",
+                    description: "Photo upload feature will be available soon",
+                  });
+                }}>
                   <Camera className="h-4 w-4 mr-2" />
                   Change Photo
                 </Button>
@@ -471,7 +650,7 @@ export const UserProfile = ({ user }: UserProfileProps) => {
                 <Button 
                   variant="outline" 
                   className="w-full justify-start"
-                  onClick={() => setShowChangePassword(true)}
+                  onClick={() => setShowOtpVerification(true)}
                 >
                   <Key className="h-4 w-4 mr-2" />
                   Change Password
@@ -489,14 +668,19 @@ export const UserProfile = ({ user }: UserProfileProps) => {
                   className="w-full justify-start"
                   onClick={() => {
                     downloadUserData();
-                    toast({
-                      title: "Download Started",
-                      description: "Your data export will download shortly"
-                    });
                   }}
                 >
                   <Download className="h-4 w-4 mr-2" />
-                  Download My Data
+                  Download My Data (PDF)
+                </Button>
+
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start text-red-600 hover:text-red-700"
+                  onClick={() => setShowSignOutDialog(true)}
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
                 </Button>
               </div>
             </div>
@@ -526,6 +710,16 @@ export const UserProfile = ({ user }: UserProfileProps) => {
       </div>
 
       {/* Modals */}
+      <OtpVerificationModal 
+        isOpen={showOtpVerification}
+        onClose={() => setShowOtpVerification(false)}
+        phoneNumber={profileData.phone}
+        onVerified={() => {
+          setShowOtpVerification(false);
+          setShowChangePassword(true);
+        }}
+      />
+
       <ChangePasswordModal 
         isOpen={showChangePassword} 
         onClose={() => setShowChangePassword(false)} 
@@ -534,6 +728,21 @@ export const UserProfile = ({ user }: UserProfileProps) => {
         isOpen={showTwoFactor} 
         onClose={() => setShowTwoFactor(false)} 
       />
+
+      <AlertDialog open={showSignOutDialog} onOpenChange={setShowSignOutDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sign Out</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to sign out of your account?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSignOut}>Sign Out</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -3,6 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { 
   History, 
   Camera, 
@@ -36,6 +38,9 @@ export const UserHistory = ({ user }: UserHistoryProps) => {
   const [selectedTab, setSelectedTab] = useState("all");
   const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteType, setDeleteType] = useState<'selected' | 'all'>('selected');
 
   useEffect(() => {
     loadHistory();
@@ -98,20 +103,56 @@ export const UserHistory = ({ user }: UserHistoryProps) => {
     }
   };
 
-  const deleteItem = async (id: string, type: 'medicine' | 'symptom') => {
+  const toggleItemSelection = (id: string) => {
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const deleteSelected = async () => {
     try {
-      const table = type === 'medicine' ? 'medicine_scans' : 'symptom_analyses';
-      const { error } = await supabase
-        .from(table)
-        .delete()
-        .eq('id', id);
+      const itemsToDelete = Array.from(selectedItems);
+      
+      for (const id of itemsToDelete) {
+        const item = historyItems.find(i => i.id === id);
+        if (item) {
+          const table = item.type === 'medicine' ? 'medicine_scans' : 'symptom_analyses';
+          await supabase.from(table).delete().eq('id', id);
+        }
+      }
 
-      if (error) throw error;
-
-      setHistoryItems(prev => prev.filter(item => item.id !== id));
-      toast("Item deleted successfully");
+      setHistoryItems(prev => prev.filter(item => !selectedItems.has(item.id)));
+      setSelectedItems(new Set());
+      toast("Selected items deleted successfully");
     } catch (error: any) {
-      toast(`Failed to delete item: ${error.message}`);
+      toast(`Failed to delete items: ${error.message}`);
+    }
+    setShowDeleteDialog(false);
+  };
+
+  const deleteAll = async () => {
+    try {
+      await supabase.from('medicine_scans').delete().eq('user_id', user.id);
+      await supabase.from('symptom_analyses').delete().eq('user_id', user.id);
+
+      setHistoryItems([]);
+      setSelectedItems(new Set());
+      toast("All history deleted successfully");
+    } catch (error: any) {
+      toast(`Failed to delete all history: ${error.message}`);
+    }
+    setShowDeleteDialog(false);
+  };
+
+  const handleDelete = () => {
+    if (deleteType === 'selected') {
+      deleteSelected();
+    } else {
+      deleteAll();
     }
   };
 
@@ -235,13 +276,29 @@ export const UserHistory = ({ user }: UserHistoryProps) => {
               </CardDescription>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
-              <Button variant="outline" size="sm">
-                <Calendar className="h-4 w-4 mr-2" />
-                Filter
+              {selectedItems.size > 0 && (
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={() => {
+                    setDeleteType('selected');
+                    setShowDeleteDialog(true);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Selected ({selectedItems.size})
+                </Button>
+              )}
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  setDeleteType('all');
+                  setShowDeleteDialog(true);
+                }}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete All
               </Button>
             </div>
           </div>
@@ -270,6 +327,10 @@ export const UserHistory = ({ user }: UserHistoryProps) => {
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between">
                           <div className="flex items-start space-x-3">
+                            <Checkbox 
+                              checked={selectedItems.has(item.id)}
+                              onCheckedChange={() => toggleItemSelection(item.id)}
+                            />
                             <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
                               item.type === 'medicine' ? 'bg-blue-100' : 'bg-purple-100'
                             }`}>
@@ -321,17 +382,9 @@ export const UserHistory = ({ user }: UserHistoryProps) => {
                             </div>
                           </div>
                           
-                          <div className="flex items-center space-x-2">
+                           <div className="flex items-center space-x-2">
                             <Button variant="ghost" size="sm">
                               <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="text-red-600 hover:text-red-700"
-                              onClick={() => deleteItem(item.id, item.type)}
-                            >
-                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </div>
@@ -344,6 +397,26 @@ export const UserHistory = ({ user }: UserHistoryProps) => {
           </Tabs>
         </CardContent>
       </Card>
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete History</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteType === 'selected' 
+                ? `Are you sure you want to delete ${selectedItems.size} selected item(s)? This action cannot be undone.`
+                : "Are you sure you want to delete ALL history? This action cannot be undone."
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
