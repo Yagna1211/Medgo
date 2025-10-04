@@ -48,9 +48,9 @@ if (user) {
 }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b bg-white/90 backdrop-blur-sm sticky top-0 z-40">
+      <header className="border-b bg-card/90 backdrop-blur-sm sticky top-0 z-40">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
@@ -225,7 +225,7 @@ if (user) {
       </section>
 
       {/* Stats Section */}
-      <section className="bg-white py-16">
+      <section className="bg-card py-16">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
             
@@ -234,7 +234,7 @@ if (user) {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-50 py-12">
+      <footer className="bg-muted/30 py-12">
         <div className="container mx-auto px-4 text-center">
           <div className="flex items-center justify-center space-x-2 mb-4">
             <Stethoscope className="h-6 w-6 text-primary" />
