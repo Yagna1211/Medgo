@@ -36,21 +36,29 @@ serve(async (req) => {
       pickupAddress 
     } = await req.json();
 
-    // Find nearby drivers
-    const { data: driversResponse } = await supabase.functions.invoke('find-nearby-drivers', {
-      body: { 
-        customerLat, 
-        customerLng, 
-        radiusKm: 10 
-      }
-    });
+    // Get ALL drivers (not just nearby ones)
+    const { data: allDrivers, error: driversError } = await supabase
+      .from('profiles')
+      .select('user_id, phone, first_name, last_name')
+      .eq('role', 'driver')
+      .not('phone', 'is', null);
 
-    const nearbyDrivers = driversResponse?.drivers || [];
-    
-    if (nearbyDrivers.length === 0) {
+    if (driversError) {
+      console.error('Error fetching drivers:', driversError);
       return new Response(JSON.stringify({ 
         success: false, 
-        message: 'No available drivers found nearby. Please call 108 for emergency services.',
+        message: 'Failed to fetch drivers',
+        driversNotified: 0
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    if (!allDrivers || allDrivers.length === 0) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'No registered ambulance drivers found. Please call 108 for emergency services.',
         driversNotified: 0
       }), {
         status: 200,
@@ -82,35 +90,33 @@ serve(async (req) => {
       });
     }
 
-    // Fetch driver phone numbers from profiles
-    const driverIds = nearbyDrivers.slice(0, 3).map(d => d.driver_id);
-    const { data: driverProfiles } = await supabase
-      .from('profiles')
-      .select('user_id, phone')
-      .in('user_id', driverIds);
-
-    // Send SMS to nearest drivers (max 3)
-    const smsPromises = nearbyDrivers.slice(0, 3).map(async (driver) => {
-      const driverProfile = driverProfiles?.find(p => p.user_id === driver.driver_id);
-      if (!driverProfile?.phone) {
-        console.log(`No phone number for driver ${driver.driver_id}`);
+    // Send SMS to ALL drivers with clickable links
+    const googleMapsLink = `https://www.google.com/maps?q=${customerLat},${customerLng}`;
+    
+    const smsPromises = allDrivers.map(async (driver) => {
+      if (!driver.phone) {
+        console.log(`No phone number for driver ${driver.user_id}`);
         return null;
       }
 
-      const cleanPhone = driverProfile.phone.replace(/^\+?91/, '').replace(/\D/g, '');
+      const cleanPhone = driver.phone.replace(/^\+?91/, '').replace(/\D/g, '');
       
       if (cleanPhone.length !== 10) {
         console.log(`Invalid phone number for driver ${driver.user_id}: ${driver.phone}`);
         return null;
       }
 
-      const message = `🚨 Emergency Alert from MedGo 🚨
-Name: ${customerName}
-Phone: ${customerPhone}
-Location: ${pickupAddress || `${customerLat}, ${customerLng}`}
-Type: ${emergencyType}
+      // Format message with clickable links
+      const message = `Emergency!! 🚨🚨
+Patient name: ${customerName}
+Patient mobile number: ${customerPhone}
+Location: ${googleMapsLink}
+Emergency Type: ${emergencyType}
+${pickupAddress ? `Address: ${pickupAddress}` : ''}
 ${description ? `Details: ${description}` : ''}
-This user requires an ambulance immediately. Please respond ASAP.`;
+
+Click location link to open Google Maps for directions.
+Call patient directly from the number above.`;
 
       try {
         const formData = new FormData();
@@ -147,14 +153,14 @@ This user requires an ambulance immediately. Please respond ASAP.`;
     const smsResults = await Promise.all(smsPromises);
     const successfulSMS = smsResults.filter(result => result && result.success);
 
-    console.log(`SMS sent to ${successfulSMS.length} out of ${nearbyDrivers.length} drivers`);
+    console.log(`SMS sent to ${successfulSMS.length} out of ${allDrivers.length} drivers`);
 
     return new Response(JSON.stringify({
       success: true,
-      message: `Emergency alert sent to ${successfulSMS.length} nearby drivers`,
+      message: `Emergency alert sent to ${successfulSMS.length} ambulance drivers`,
       requestId: newRequest.id,
       driversNotified: successfulSMS.length,
-      totalDriversFound: nearbyDrivers.length
+      totalDriversFound: allDrivers.length
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
