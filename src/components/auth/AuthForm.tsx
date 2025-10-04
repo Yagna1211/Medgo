@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { signInSchema, signUpSchema, driverSignUpSchema } from "@/lib/validationSchemas";
+import { z } from "zod";
 
 interface AuthFormProps {
   onAuthSuccess: (user: any) => void;
@@ -40,21 +42,30 @@ export const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
     setIsLoading(true);
     
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      // Validate input
+      const validatedData = signInSchema.parse({
         email: formData.email,
         password: formData.password,
       });
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: validatedData.email,
+        password: validatedData.password,
+      });
       
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
       
       if (data.user) {
         onAuthSuccess(data.user);
-        toast("Welcome back! You have successfully signed in.");
+        toast.success("Welcome back! You have successfully signed in.");
       }
     } catch (error: any) {
-      toast(`Authentication failed: ${error.message}`);
+      if (error instanceof z.ZodError) {
+        const firstError = error.issues[0];
+        toast.error(firstError.message);
+      } else {
+        toast.error(error.message || "Authentication failed");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -65,32 +76,55 @@ export const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
     setIsLoading(true);
     
     try {
-      const { data, error } = await supabase.auth.signUp({
+      // Validate input based on role
+      const schema = formData.role === 'driver' ? driverSignUpSchema : signUpSchema;
+      const validatedData: any = schema.parse({
         email: formData.email,
         password: formData.password,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        role: formData.role,
+        ...(formData.role === 'driver' && {
+          ambulanceNumber: formData.ambulanceNumber,
+          vehicleDetails: formData.vehicleDetails,
+          serviceArea: formData.serviceArea,
+        }),
+      });
+
+      const metadata: any = {
+        first_name: validatedData.firstName,
+        last_name: validatedData.lastName,
+        role: validatedData.role,
+      };
+
+      if (validatedData.role === 'driver') {
+        metadata.ambulance_number = validatedData.ambulanceNumber;
+        metadata.vehicle_details = validatedData.vehicleDetails;
+        metadata.service_area = validatedData.serviceArea;
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email: validatedData.email,
+        password: validatedData.password,
         options: {
           emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            role: formData.role,
-            ambulance_number: formData.ambulanceNumber,
-            vehicle_details: formData.vehicleDetails,
-            service_area: formData.serviceArea,
-          }
+          data: metadata,
         }
       });
       
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
       
       if (data.user) {
         onAuthSuccess(data.user);
-        toast("Account created! Welcome to MediScan.");
+        toast.success("Account created! Welcome to MediScan.");
       }
     } catch (error: any) {
-      toast(`Registration failed: ${error.message}`);
+      if (error instanceof z.ZodError) {
+        const firstError = error.issues[0];
+        toast.error(firstError.message);
+      } else {
+        toast.error(error.message || "Registration failed");
+      }
     } finally {
       setIsLoading(false);
     }

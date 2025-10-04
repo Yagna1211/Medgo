@@ -39,6 +39,21 @@ verify_jwt = true
 [functions.analyze-symptoms]
 verify_jwt = true
 
+[functions.send-driver-alerts]
+verify_jwt = true
+
+[functions.dispatch-ambulance]
+verify_jwt = true
+
+[functions.nearby-ambulances]
+verify_jwt = true
+
+[functions.send-sms]
+verify_jwt = true
+
+[functions.send-otp]
+verify_jwt = false
+
 [auth]
 enabled = true
 additional_redirect_urls = ["https://127.0.0.1:3000/**"]

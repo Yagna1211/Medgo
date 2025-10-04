@@ -158,18 +158,21 @@ export type Database = {
       driver_status: {
         Row: {
           available: boolean
+          created_at: string | null
           location: unknown | null
           updated_at: string
           user_id: string
         }
         Insert: {
           available?: boolean
+          created_at?: string | null
           location?: unknown | null
           updated_at?: string
           user_id: string
         }
         Update: {
           available?: boolean
+          created_at?: string | null
           location?: unknown | null
           updated_at?: string
           user_id?: string
@@ -335,15 +338,46 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      cleanup_old_location_data: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "customer" | "driver" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -470,6 +504,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["customer", "driver", "admin"],
+    },
   },
 } as const

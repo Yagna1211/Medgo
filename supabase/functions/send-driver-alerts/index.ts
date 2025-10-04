@@ -36,18 +36,102 @@ serve(async (req) => {
       pickupAddress 
     } = await req.json();
 
-    // Get ALL drivers (not just nearby ones)
+    console.log('Received emergency request:', { 
+      customerId, 
+      emergencyType, 
+      location: { lat: customerLat, lng: customerLng } 
+    });
+
+    // Helper function to calculate distance using Haversine formula
+    const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+      const toRad = (x: number) => (x * Math.PI) / 180;
+      const R = 6371; // Earth's radius in km
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a = Math.sin(dLat / 2) ** 2 +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                Math.sin(dLon / 2) ** 2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    };
+
+    // Fetch available drivers with their locations
+    const { data: driverStatuses, error: statusError } = await supabase
+      .from('driver_status')
+      .select('user_id, location, available')
+      .eq('available', true)
+      .not('location', 'is', null);
+
+    if (statusError) {
+      console.error('Error fetching driver statuses:', statusError);
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Failed to fetch driver statuses',
+        driversNotified: 0
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!driverStatuses || driverStatuses.length === 0) {
+      console.log('No available drivers found');
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: 'No available drivers to notify',
+        driversNotified: 0 
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Filter drivers within 50km radius and sort by distance
+    const nearbyDrivers = driverStatuses
+      .map(status => {
+        // Parse location point (format: "(lat,lng)")
+        const locMatch = status.location.match(/\(([-\d.]+),([-\d.]+)\)/);
+        if (!locMatch) return null;
+        
+        const [_, driverLat, driverLng] = locMatch;
+        const distance = haversineKm(
+          customerLat,
+          customerLng,
+          parseFloat(driverLat),
+          parseFloat(driverLng)
+        );
+        
+        return { user_id: status.user_id, distance };
+      })
+      .filter(driver => driver !== null && driver.distance <= 50)
+      .sort((a, b) => a!.distance - b!.distance)
+      .slice(0, 10); // Limit to 10 nearest drivers
+
+    if (nearbyDrivers.length === 0) {
+      console.log('No drivers within 50km radius');
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: 'No drivers within range',
+        driversNotified: 0 
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Fetch driver profiles for nearby drivers only
+    const nearbyDriverIds = nearbyDrivers.map(d => d!.user_id);
     const { data: allDrivers, error: driversError } = await supabase
       .from('profiles')
       .select('user_id, phone, first_name, last_name')
-      .eq('role', 'driver')
+      .in('user_id', nearbyDriverIds)
       .not('phone', 'is', null);
 
     if (driversError) {
-      console.error('Error fetching drivers:', driversError);
+      console.error('Error fetching driver profiles:', driversError);
       return new Response(JSON.stringify({ 
         success: false, 
-        message: 'Failed to fetch drivers',
+        message: 'Failed to fetch driver profiles',
         driversNotified: 0
       }), {
         status: 500,
@@ -56,10 +140,11 @@ serve(async (req) => {
     }
     
     if (!allDrivers || allDrivers.length === 0) {
+      console.log('No driver profiles found');
       return new Response(JSON.stringify({ 
-        success: false, 
-        message: 'No registered ambulance drivers found. Please call 108 for emergency services.',
-        driversNotified: 0
+        success: true, 
+        message: 'No drivers available',
+        driversNotified: 0 
       }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
