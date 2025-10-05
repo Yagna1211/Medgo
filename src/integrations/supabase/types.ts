@@ -247,7 +247,6 @@ export type Database = {
           notification_preferences: boolean | null
           phone: string | null
           preferred_language: string | null
-          role: string | null
           service_area: string | null
           updated_at: string
           user_id: string
@@ -272,7 +271,6 @@ export type Database = {
           notification_preferences?: boolean | null
           phone?: string | null
           preferred_language?: string | null
-          role?: string | null
           service_area?: string | null
           updated_at?: string
           user_id: string
@@ -297,11 +295,67 @@ export type Database = {
           notification_preferences?: boolean | null
           phone?: string | null
           preferred_language?: string | null
-          role?: string | null
           service_area?: string | null
           updated_at?: string
           user_id?: string
           vehicle_details?: string | null
+        }
+        Relationships: []
+      }
+      rate_limits: {
+        Row: {
+          action: string
+          attempt_count: number
+          blocked_until: string | null
+          created_at: string
+          id: string
+          identifier: string
+          window_start: string
+        }
+        Insert: {
+          action: string
+          attempt_count?: number
+          blocked_until?: string | null
+          created_at?: string
+          id?: string
+          identifier: string
+          window_start?: string
+        }
+        Update: {
+          action?: string
+          attempt_count?: number
+          blocked_until?: string | null
+          created_at?: string
+          id?: string
+          identifier?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
+      sms_audit_log: {
+        Row: {
+          consent_given: boolean
+          created_at: string
+          emergency_type: string
+          id: string
+          recipient_count: number
+          user_id: string
+        }
+        Insert: {
+          consent_given?: boolean
+          created_at?: string
+          emergency_type: string
+          id?: string
+          recipient_count: number
+          user_id: string
+        }
+        Update: {
+          consent_given?: boolean
+          created_at?: string
+          emergency_type?: string
+          id?: string
+          recipient_count?: number
+          user_id?: string
         }
         Relationships: []
       }
@@ -364,6 +418,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_rate_limit: {
+        Args: {
+          _action: string
+          _identifier: string
+          _max_attempts: number
+          _window_minutes: number
+        }
+        Returns: Json
+      }
       cleanup_old_location_data: {
         Args: Record<PropertyKey, never>
         Returns: undefined

@@ -33,8 +33,42 @@ serve(async (req) => {
       customerLng, 
       emergencyType,
       description,
-      pickupAddress 
+      pickupAddress,
+      consentGiven
     } = await req.json();
+
+    // Verify consent was given
+    if (!consentGiven) {
+      return new Response(
+        JSON.stringify({ error: "Patient consent required to share information" }),
+        { 
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400 
+        }
+      );
+    }
+
+    // Rate limiting: Check if user has exceeded emergency alert limit (3 per hour)
+    const { data: rateLimitCheck } = await supabase
+      .rpc('check_rate_limit', {
+        _identifier: customerId,
+        _action: 'emergency_alert',
+        _max_attempts: 3,
+        _window_minutes: 60
+      });
+
+    if (rateLimitCheck && !rateLimitCheck.allowed) {
+      return new Response(
+        JSON.stringify({ 
+          error: "Rate limit exceeded. Maximum 3 emergency alerts per hour.",
+          blocked_until: rateLimitCheck.blocked_until
+        }),
+        { 
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429 
+        }
+      );
+    }
 
     console.log('Received emergency request:', { 
       customerId, 
@@ -175,7 +209,7 @@ serve(async (req) => {
       });
     }
 
-    // Send SMS to ALL drivers with clickable links
+    // Anonymized SMS message - no direct patient phone number
     const googleMapsLink = `https://www.google.com/maps?q=${customerLat},${customerLng}`;
     
     const smsPromises = allDrivers.map(async (driver) => {
@@ -191,17 +225,15 @@ serve(async (req) => {
         return null;
       }
 
-      // Format message with clickable links
-      const message = `Emergency!! 🚨🚨
-Patient name: ${customerName}
-Patient mobile number: ${customerPhone}
-Location: ${googleMapsLink}
-Emergency Type: ${emergencyType}
-${pickupAddress ? `Address: ${pickupAddress}` : ''}
-${description ? `Details: ${description}` : ''}
+      // Anonymized message - patient details removed for privacy
+      const message = `🚨 EMERGENCY ALERT 🚨
 
-Click location link to open Google Maps for directions.
-Call patient directly from the number above.`;
+Emergency Type: ${emergencyType}
+Location: ${googleMapsLink}
+${pickupAddress ? `Address: ${pickupAddress}` : ''}
+
+Contact dispatch center for patient details.
+MEDGO Emergency System`;
 
       try {
         const formData = new FormData();
@@ -239,6 +271,16 @@ Call patient directly from the number above.`;
     const successfulSMS = smsResults.filter(result => result && result.success);
 
     console.log(`SMS sent to ${successfulSMS.length} out of ${allDrivers.length} drivers`);
+
+    // Audit log the SMS dispatch
+    await supabase
+      .from('sms_audit_log')
+      .insert({
+        user_id: customerId,
+        recipient_count: successfulSMS.length,
+        emergency_type: emergencyType,
+        consent_given: consentGiven
+      });
 
     return new Response(JSON.stringify({
       success: true,

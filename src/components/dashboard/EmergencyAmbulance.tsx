@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-
+import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,12 +12,15 @@ import {
   Phone, 
   Navigation,
   Loader2,
-  Heart
+  Heart,
+  ShieldAlert
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useVoiceTrigger } from "@/hooks/use-voice-trigger";
 import { MapContainer, TileLayer, CircleMarker, Polyline, Popup } from "react-leaflet";
+import { emergencyBookingSchema } from "@/lib/validationSchemas";
+import { logger } from "@/lib/logger";
 interface EmergencyBookingProps {
   user: any;
 }
@@ -32,6 +35,7 @@ export const EmergencyAmbulance = ({ user }: EmergencyBookingProps) => {
     description: '',
     pickupAddress: ''
   });
+  const [consentGiven, setConsentGiven] = useState(false);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
   const radiusKm = 5;
@@ -61,7 +65,7 @@ export const EmergencyAmbulance = ({ user }: EmergencyBookingProps) => {
           }));
         }
       } catch (error) {
-        console.error('Error fetching profile:', error);
+        logger.error('Error fetching profile:', error);
       }
     };
 
@@ -71,6 +75,11 @@ export const EmergencyAmbulance = ({ user }: EmergencyBookingProps) => {
   const sendAlerts = async () => {
     if (!userLocation) {
       toast("Please get your location first");
+      return;
+    }
+
+    if (!consentGiven) {
+      toast("Please provide consent to share your information with ambulance drivers");
       return;
     }
     
@@ -83,7 +92,22 @@ export const EmergencyAmbulance = ({ user }: EmergencyBookingProps) => {
     const customerPhone = bookingDetails.phoneNumber || 
       userProfile?.phone || 
       userProfile?.emergency_contact_phone || 
-      'N/A';
+      '';
+
+    // Validate input using zod schema
+    try {
+      emergencyBookingSchema.parse({
+        patientName: customerName,
+        patientPhone: customerPhone,
+        emergencyType: bookingDetails.emergencyType,
+        pickupAddress: bookingDetails.pickupAddress,
+        additionalInfo: bookingDetails.description
+      });
+    } catch (validationError: any) {
+      const firstError = validationError.issues?.[0]?.message || 'Please fill in all required fields correctly';
+      toast(firstError);
+      return;
+    }
 
     setIsBooking(true);
     try {
@@ -97,6 +121,7 @@ export const EmergencyAmbulance = ({ user }: EmergencyBookingProps) => {
           emergencyType: bookingDetails.emergencyType,
           description: bookingDetails.description,
           pickupAddress: bookingDetails.pickupAddress,
+          consentGiven
         }
       });
       
@@ -108,7 +133,7 @@ export const EmergencyAmbulance = ({ user }: EmergencyBookingProps) => {
         toast(data?.message || "No available drivers found nearby. Please try emergency services: 108");
       }
     } catch (e) {
-      console.error('Emergency alert error:', e);
+      logger.error('Emergency alert error:', e);
       toast("Failed to send emergency alerts. Please call 108 immediately!");
     } finally {
       setIsBooking(false);
@@ -137,7 +162,7 @@ export const EmergencyAmbulance = ({ user }: EmergencyBookingProps) => {
       setDrivers(data?.drivers ?? []);
       toast(`Found ${data?.count ?? 0} nearby ambulances`);
     } catch (e) {
-      console.error('nearby error', e);
+      logger.error('nearby error', e);
       toast('Failed to load nearby ambulances');
     }
   };
@@ -160,7 +185,7 @@ export const EmergencyAmbulance = ({ user }: EmergencyBookingProps) => {
       const coords = (route.data?.coordinates || []).map((c: [number, number]) => [c[1], c[0]] as [number, number]);
       setRouteCoords(coords);
     } catch (e) {
-      console.error('route error', e);
+      logger.error('route error', e);
       toast('Failed to draw route');
     }
   };
@@ -207,7 +232,7 @@ const getCurrentLocation = () => {
         toast("Location found successfully!");
       },
       (error) => {
-        console.error("Error getting location:", error);
+        logger.error("Error getting location:", error);
         setIsLoadingLocation(false);
         toast("Please enable location access for accurate results.");
       }
@@ -418,8 +443,27 @@ const getCurrentLocation = () => {
         </AlertDescription>
       </Alert>
 
+      <div className="flex items-center space-x-2 p-4 border rounded-lg bg-muted/50">
+        <Checkbox 
+          id="consent" 
+          checked={consentGiven}
+          onCheckedChange={(checked) => setConsentGiven(checked as boolean)}
+        />
+        <div className="grid gap-1.5 leading-none">
+          <label
+            htmlFor="consent"
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+          >
+            I consent to sharing my contact information
+          </label>
+          <p className="text-xs text-muted-foreground">
+            Your name, phone number, and location will be shared with nearby ambulance drivers to provide emergency assistance.
+          </p>
+        </div>
+      </div>
+
       <div className="flex gap-2">
-        <Button onClick={sendAlerts} disabled={isBooking || !userLocation} className="flex-1 bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+        <Button onClick={sendAlerts} disabled={isBooking || !userLocation || !consentGiven} className="flex-1 bg-destructive hover:bg-destructive/90 text-destructive-foreground">
           {isBooking ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />

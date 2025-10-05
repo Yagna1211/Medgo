@@ -24,6 +24,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { profileUpdateSchema } from "@/lib/validationSchemas";
+import { logger } from "@/lib/logger";
 import { ChangePasswordModal } from "@/components/auth/ChangePasswordModal";
 import { TwoFactorModal } from "@/components/auth/TwoFactorModal";
 import { OtpVerificationModal } from "@/components/auth/OtpVerificationModal";
@@ -110,7 +112,7 @@ export const UserProfile = ({ user }: UserProfileProps) => {
         lastActivity
       });
     } catch (error) {
-      console.error("Error fetching stats:", error);
+      logger.error("Error fetching stats:", error);
     }
   };
 
@@ -188,6 +190,28 @@ export const UserProfile = ({ user }: UserProfileProps) => {
 
   const handleSave = async () => {
     try {
+      // Validate profile data using zod schema
+      const emergencyContactParts = profileData.emergencyContact.split(' - ');
+      const validationData = {
+        firstName: profileData.firstName,
+        lastName: profileData.lastName,
+        phone: profileData.phone || undefined,
+        emergencyContactName: emergencyContactParts[0] || undefined,
+        emergencyContactPhone: emergencyContactParts[1] || undefined
+      };
+
+      try {
+        profileUpdateSchema.parse(validationData);
+      } catch (validationError: any) {
+        const errorMessages = validationError.issues.map((issue: any) => issue.message).join(', ');
+        toast({
+          title: "Validation Error",
+          description: errorMessages,
+          variant: "destructive"
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from('profiles')
         .upsert({
@@ -195,15 +219,15 @@ export const UserProfile = ({ user }: UserProfileProps) => {
           first_name: profileData.firstName,
           last_name: profileData.lastName,
           email: profileData.email,
-          phone: profileData.phone,
+          phone: profileData.phone || null,
           date_of_birth: profileData.dateOfBirth || null,
           allergies: profileData.allergies,
           current_medications: profileData.currentMedications,
           medical_conditions: profileData.medicalConditions,
           notification_preferences: profileData.preferences.emailNotifications,
           data_sharing_consent: profileData.preferences.dataSharing,
-          emergency_contact_name: profileData.emergencyContact.split(' - ')[0] || null,
-          emergency_contact_phone: profileData.emergencyContact.split(' - ')[1] || null,
+          emergency_contact_name: emergencyContactParts[0] || null,
+          emergency_contact_phone: emergencyContactParts[1] || null,
         }, {
           onConflict: 'user_id'
         });
@@ -216,6 +240,7 @@ export const UserProfile = ({ user }: UserProfileProps) => {
       });
       setIsEditing(false);
     } catch (error: any) {
+      logger.error("Error saving profile:", error);
       toast({
         title: "Error saving profile",
         description: error.message,

@@ -48,7 +48,6 @@ export const driverSignUpSchema = signUpSchema.extend({
     .max(100, { message: "Service area must be less than 100 characters" }),
 });
 
-// Emergency booking validation
 export const emergencyBookingSchema = z.object({
   patientName: z.string()
     .trim()
@@ -56,6 +55,7 @@ export const emergencyBookingSchema = z.object({
     .max(100, { message: "Patient name must be less than 100 characters" }),
   patientPhone: z.string()
     .trim()
+    .min(1, { message: "Phone number is required" })
     .regex(/^[0-9]{10}$/, { message: "Phone number must be exactly 10 digits" }),
   emergencyType: z.string()
     .trim()
