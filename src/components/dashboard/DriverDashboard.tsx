@@ -282,6 +282,24 @@ export const DriverDashboard = ({ user }: DriverDashboardProps) => {
           </Alert>
         )}
 
+        {!isAvailable && (
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              You are currently <strong>OFFLINE</strong>. Toggle the switch above to go online and start receiving emergency requests.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {isAvailable && (
+          <Alert className="border-green-500 bg-green-500/10">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-green-600">
+              You are <strong>ONLINE</strong> and will receive emergency alerts from nearby patients.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="requests">

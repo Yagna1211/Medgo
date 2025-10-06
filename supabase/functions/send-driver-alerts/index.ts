@@ -272,6 +272,28 @@ MEDGO Emergency System`;
 
     console.log(`SMS sent to ${successfulSMS.length} out of ${allDrivers.length} drivers`);
 
+    // Insert notifications into ambulance_notifications table for in-app alerts
+    const notificationInserts = nearbyDrivers.map(driver => ({
+      user_id: customerId,
+      driver_id: driver!.user_id,
+      pickup_location: `POINT(${customerLng} ${customerLat})`,
+      pickup_address: pickupAddress,
+      emergency_type: emergencyType,
+      description: description,
+      distance_km: driver!.distance,
+      status: 'pending'
+    }));
+
+    const { error: notificationError } = await supabase
+      .from('ambulance_notifications')
+      .insert(notificationInserts);
+
+    if (notificationError) {
+      console.error('Error inserting notifications:', notificationError);
+    } else {
+      console.log(`Inserted ${notificationInserts.length} in-app notifications`);
+    }
+
     // Audit log the SMS dispatch
     await supabase
       .from('sms_audit_log')
@@ -284,10 +306,11 @@ MEDGO Emergency System`;
 
     return new Response(JSON.stringify({
       success: true,
-      message: `Emergency alert sent to ${successfulSMS.length} ambulance drivers`,
+      message: `Emergency alert sent to ${nearbyDrivers.length} ambulance drivers`,
       requestId: newRequest.id,
-      driversNotified: successfulSMS.length,
-      totalDriversFound: allDrivers.length
+      driversNotified: nearbyDrivers.length,
+      totalDriversFound: allDrivers.length,
+      smsDelivered: successfulSMS.length
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

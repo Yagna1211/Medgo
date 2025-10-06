@@ -15,28 +15,36 @@ export const Dashboard = ({ user, onLogout, initialView }: DashboardProps) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchUserProfile = async () => {
+    const fetchUserRole = async () => {
       if (!user?.id) {
         setIsLoading(false);
         return;
       }
       
       try {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
+        // Fetch user role from user_roles table (security best practice)
+        const { data: roleData, error } = await supabase
+          .from('user_roles')
+          .select('role')
           .eq('user_id', user.id)
           .single();
         
-        setUserProfile(profile);
+        if (error) {
+          console.error('Error fetching user role:', error);
+          // Default to customer if no role found
+          setUserProfile({ role: 'customer' });
+        } else {
+          setUserProfile({ role: roleData.role });
+        }
       } catch (error) {
-        console.error('Error fetching user profile:', error);
+        console.error('Error fetching user role:', error);
+        setUserProfile({ role: 'customer' });
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchUserProfile();
+    fetchUserRole();
   }, [user?.id]);
 
   if (isLoading) {
