@@ -37,7 +37,7 @@ interface AmbulanceRequest {
   description?: string;
   created_at: string;
   status: string;
-  customer_location: string;
+  customer_location: unknown;
 }
 
 interface NotificationAlert {
@@ -129,7 +129,14 @@ export const DriverDashboard = ({ user }: DriverDashboardProps) => {
           } catch (err) {
             logger.error('Audio creation failed:', err);
           }
-          const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2J1PDMeSsFJHf
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
 
   // Fetch ambulance requests for this driver
   useEffect(() => {
@@ -142,16 +149,11 @@ export const DriverDashboard = ({ user }: DriverDashboardProps) => {
           .select('*')
           .eq('driver_id', user.id)
           .order('created_at', { ascending: false });
-        
+
         if (error) throw error;
-        
-        setRequests((data || []).map(req => ({
-          ...req,
-          customer_location: req.customer_location as string
-        })));
+        if (data) setRequests(data);
       } catch (error) {
-        console.error('Error fetching requests:', error);
-        toast('Failed to load requests');
+        logger.error('Error fetching requests:', error);
       }
     };
 
@@ -159,255 +161,270 @@ export const DriverDashboard = ({ user }: DriverDashboardProps) => {
   }, [user?.id]);
 
   const toggleAvailability = async () => {
+    if (!user?.id) return;
+
+    if (locationPermission !== 'granted') {
+      toast.error('Please enable location permission to go online');
+      return;
+    }
+
     setIsLoading(true);
+    
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ is_available: !isAvailable })
-        .eq('user_id', user.id);
-      
-      if (error) throw error;
-      
-      setIsAvailable(!isAvailable);
-      toast(isAvailable ? 'You are now offline' : 'You are now online and available for requests');
+      // Get current location
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          const location = `POINT(${longitude} ${latitude})`;
+
+          const newAvailability = !isAvailable;
+
+          // Upsert driver_status
+          const { error } = await supabase
+            .from('driver_status')
+            .upsert({
+              user_id: user.id,
+              available: newAvailability,
+              location: location,
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'user_id'
+            });
+
+          if (error) throw error;
+
+          setIsAvailable(newAvailability);
+          toast.success(newAvailability ? 'You are now ONLINE' : 'You are now OFFLINE');
+        },
+        (error) => {
+          logger.error('Geolocation error:', error);
+          toast.error('Failed to get your location. Please check your settings.');
+        }
+      );
     } catch (error) {
-      console.error('Error updating availability:', error);
-      toast('Failed to update availability');
+      logger.error('Error toggling availability:', error);
+      toast.error('Failed to update availability');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const updateRequestStatus = async (requestId: string, newStatus: string) => {
+  const acceptRequest = async (requestId: string) => {
     try {
       const { error } = await supabase
         .from('ambulance_requests')
-        .update({ 
-          status: newStatus,
-          driver_id: newStatus === 'accepted' ? user.id : null 
-        })
+        .update({ status: 'accepted' })
         .eq('id', requestId);
-      
+
       if (error) throw error;
       
-      // Update local state
-      setRequests(prev => prev.map(req => 
-        req.id === requestId 
-          ? { ...req, status: newStatus }
-          : req
-      ));
+      toast.success('Request accepted!');
       
-      toast(`Request ${newStatus}`);
+      // Refresh requests
+      const { data } = await supabase
+        .from('ambulance_requests')
+        .select('*')
+        .eq('driver_id', user.id)
+        .order('created_at', { ascending: false });
+      
+      if (data) setRequests(data);
     } catch (error) {
-      console.error('Error updating request:', error);
-      toast('Failed to update request');
+      logger.error('Error accepting request:', error);
+      toast.error('Failed to accept request');
     }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'bg-yellow-500';
-      case 'accepted': return 'bg-blue-500';
-      case 'completed': return 'bg-green-500';
-      case 'cancelled': return 'bg-red-500';
-      default: return 'bg-gray-500';
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-      <div className="container mx-auto p-6">
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mb-2">
-                Driver Dashboard
-              </h1>
-              <p className="text-muted-foreground">
-                Manage your ambulance requests and availability
-              </p>
-            </div>
-            
-            <Card className="p-4">
-              <div className="flex items-center space-x-4">
-                <Label htmlFor="availability" className="font-medium">
-                  {isAvailable ? 'Online' : 'Offline'}
-                </Label>
-                <Switch
-                  id="availability"
-                  checked={isAvailable}
-                  onCheckedChange={toggleAvailability}
-                  disabled={isLoading}
-                />
-                <div className={`w-3 h-3 rounded-full ${isAvailable ? 'bg-green-500' : 'bg-red-500'}`} />
-              </div>
-            </Card>
+    <div className="min-h-screen bg-background p-6">
+      <div className="max-w-6xl mx-auto space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Driver Dashboard</h1>
+            <p className="text-muted-foreground">
+              Manage your ambulance requests and availability
+            </p>
           </div>
-
-          {profile && (
-            <Card className="mb-6">
-              <CardContent className="p-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Car className="h-4 w-4 text-primary" />
-                    <span className="font-medium">Ambulance:</span> {profile.ambulance_number}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-primary" />
-                    <span className="font-medium">Service Area:</span> {profile.service_area}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Bell className="h-4 w-4 text-primary" />
-                    <span className="font-medium">Status:</span>
-                    <Badge variant={isAvailable ? "default" : "secondary"}>
-                      {isAvailable ? 'Available' : 'Offline'}
-                    </Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="availability"
+                checked={isAvailable}
+                onCheckedChange={toggleAvailability}
+                disabled={isLoading}
+              />
+              <Label htmlFor="availability" className="font-semibold">
+                {isAvailable ? (
+                  <Badge variant="default" className="bg-green-500">Online</Badge>
+                ) : (
+                  <Badge variant="secondary">Offline</Badge>
+                )}
+              </Label>
+            </div>
+          </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-8">
-            <TabsTrigger value="requests" className="flex items-center gap-2">
-              <Bell className="h-4 w-4" />
-              My Requests
+        {locationPermission === 'denied' && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              Location permission is denied. Please enable it in your browser settings to receive emergency alerts.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {locationPermission === 'prompt' && !isAvailable && (
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              You'll be asked for location permission when you go online.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="requests">
+              <Car className="mr-2 h-4 w-4" />
+              Requests
             </TabsTrigger>
-            <TabsTrigger value="profile" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
+            <TabsTrigger value="notifications">
+              <Bell className="mr-2 h-4 w-4" />
+              Notifications
+              {notifications.length > 0 && (
+                <Badge variant="destructive" className="ml-2">
+                  {notifications.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="profile">
+              <User className="mr-2 h-4 w-4" />
               Profile
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="requests">
-            <div className="space-y-4">
-              {requests.length === 0 ? (
-                <Card>
-                  <CardContent className="p-8 text-center">
-                    <Bell className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <h3 className="text-lg font-semibold mb-2">No Requests Yet</h3>
-                    <p className="text-muted-foreground">
-                      {isAvailable 
-                        ? "You're online and ready to receive emergency requests."
-                        : "Turn on availability to start receiving requests."
-                      }
-                    </p>
+          <TabsContent value="requests" className="space-y-4">
+            {requests.length === 0 ? (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <Car className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">No requests yet</p>
+                </CardContent>
+              </Card>
+            ) : (
+              requests.map((request) => (
+                <Card key={request.id}>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle>{request.emergency_type}</CardTitle>
+                        <CardDescription>
+                          Request ID: {request.id.slice(0, 8)}...
+                        </CardDescription>
+                      </div>
+                      <Badge
+                        variant={
+                          request.status === 'accepted' ? 'default' :
+                          request.status === 'pending' ? 'secondary' :
+                          'destructive'
+                        }
+                      >
+                        {request.status}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center text-sm">
+                      <User className="mr-2 h-4 w-4 text-muted-foreground" />
+                      <span>{request.customer_name}</span>
+                    </div>
+                    <div className="flex items-center text-sm">
+                      <Phone className="mr-2 h-4 w-4 text-muted-foreground" />
+                      <span>{request.customer_phone}</span>
+                    </div>
+                    {request.pickup_address && (
+                      <div className="flex items-center text-sm">
+                        <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
+                        <span>{request.pickup_address}</span>
+                      </div>
+                    )}
+                    {request.description && (
+                      <div className="flex items-start text-sm">
+                        <Info className="mr-2 h-4 w-4 text-muted-foreground mt-0.5" />
+                        <span>{request.description}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <Clock className="mr-2 h-4 w-4" />
+                      <span>{new Date(request.created_at).toLocaleString()}</span>
+                    </div>
+                    
+                    {request.status === 'pending' && (
+                      <div className="flex gap-2 pt-2">
+                        <Button 
+                          onClick={() => acceptRequest(request.id)}
+                          className="flex-1"
+                        >
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          Accept Request
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
-              ) : (
-                requests.map((request) => (
-                  <Card key={request.id}>
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle className="flex items-center gap-2">
-                            <AlertTriangle className="h-5 w-5 text-red-500" />
-                            Emergency Request
-                          </CardTitle>
-                          <CardDescription>
-                            {formatDate(request.created_at)}
-                          </CardDescription>
-                        </div>
-                        <Badge className={getStatusColor(request.status)}>
-                          {request.status}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <Label className="text-sm font-medium">Patient</Label>
-                            <p className="text-sm">{request.customer_name}</p>
-                          </div>
-                          <div>
-                            <Label className="text-sm font-medium">Contact</Label>
-                            <p className="text-sm flex items-center gap-1">
-                              <Phone className="h-3 w-3" />
-                              {request.customer_phone}
-                            </p>
-                          </div>
-                          <div>
-                            <Label className="text-sm font-medium">Emergency Type</Label>
-                            <p className="text-sm">{request.emergency_type}</p>
-                          </div>
-                          <div>
-                            <Label className="text-sm font-medium">Location</Label>
-                            <p className="text-sm">{request.pickup_address || 'GPS coordinates provided'}</p>
-                          </div>
-                        </div>
-                        
-                        {request.description && (
-                          <div>
-                            <Label className="text-sm font-medium">Additional Details</Label>
-                            <p className="text-sm text-muted-foreground">{request.description}</p>
-                          </div>
-                        )}
+              ))
+            )}
+          </TabsContent>
 
-                        <div className="flex gap-2 flex-wrap">
-                          {request.status === 'pending' && (
-                            <>
-                              <Button 
-                                onClick={() => updateRequestStatus(request.id, 'accepted')}
-                                className="flex items-center gap-2"
-                              >
-                                <CheckCircle className="h-4 w-4" />
-                                Accept Request
-                              </Button>
-                              <Button 
-                                variant="outline"
-                                onClick={() => updateRequestStatus(request.id, 'cancelled')}
-                                className="flex items-center gap-2"
-                              >
-                                <XCircle className="h-4 w-4" />
-                                Decline
-                              </Button>
-                            </>
-                          )}
-                          
-                          {request.status === 'accepted' && (
-                            <Button 
-                              onClick={() => updateRequestStatus(request.id, 'completed')}
-                              className="flex items-center gap-2"
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                              Mark Complete
-                            </Button>
-                          )}
-                          
-                          <Button
-                            variant="outline"
-                            asChild
-                          >
-                            <a
-                              href={`https://www.google.com/maps/search/?api=1&query=${request.pickup_address || 'Emergency Location'}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-2"
-                            >
-                              <Navigation className="h-4 w-4" />
-                              Get Directions
-                            </a>
-                          </Button>
-                        </div>
+          <TabsContent value="notifications" className="space-y-4">
+            {notifications.length === 0 ? (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <Bell className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">No notifications</p>
+                </CardContent>
+              </Card>
+            ) : (
+              notifications.map((notification) => (
+                <Card key={notification.id}>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-red-600">
+                          🚨 {notification.emergency_type}
+                        </CardTitle>
+                        <CardDescription>
+                          {notification.distance_km && 
+                            `${notification.distance_km.toFixed(1)} km away`
+                          }
+                        </CardDescription>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
+                      <Badge variant="destructive">
+                        {notification.status}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {notification.pickup_address && (
+                      <div className="flex items-center text-sm">
+                        <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
+                        <span>{notification.pickup_address}</span>
+                      </div>
+                    )}
+                    {notification.description && (
+                      <div className="flex items-start text-sm">
+                        <Info className="mr-2 h-4 w-4 text-muted-foreground mt-0.5" />
+                        <span>{notification.description}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <Clock className="mr-2 h-4 w-4" />
+                      <span>{new Date(notification.created_at).toLocaleString()}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </TabsContent>
 
           <TabsContent value="profile">
