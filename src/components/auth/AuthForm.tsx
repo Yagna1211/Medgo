@@ -25,6 +25,7 @@ export const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
     firstName: "",
     lastName: "",
     role: "customer",
+    phone: "",
     ambulanceNumber: "",
     vehicleDetails: "",
     serviceArea: "",
@@ -85,6 +86,7 @@ export const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
         lastName: formData.lastName,
         role: formData.role,
         ...(formData.role === 'driver' && {
+          phone: formData.phone,
           ambulanceNumber: formData.ambulanceNumber,
           vehicleDetails: formData.vehicleDetails,
           serviceArea: formData.serviceArea,
@@ -98,6 +100,7 @@ export const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
       };
 
       if (validatedData.role === 'driver') {
+        metadata.phone = validatedData.phone;
         metadata.ambulance_number = validatedData.ambulanceNumber;
         metadata.vehicle_details = validatedData.vehicleDetails;
         metadata.service_area = validatedData.serviceArea;
@@ -268,6 +271,19 @@ export const AuthForm = ({ onAuthSuccess }: AuthFormProps) => {
                   <div className="space-y-4 p-4 border rounded-lg bg-secondary/5">
                     <h3 className="font-semibold text-sm">Driver Information</h3>
                     
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone Number</Label>
+                      <Input
+                        id="phone"
+                        name="phone"
+                        type="tel"
+                        placeholder="e.g., 9876543210"
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                        required={formData.role === "driver"}
+                      />
+                    </div>
+
                     <div className="space-y-2">
                       <Label htmlFor="ambulanceNumber">Ambulance Number</Label>
                       <Input

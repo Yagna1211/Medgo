@@ -34,6 +34,10 @@ export const signUpSchema = z.object({
 });
 
 export const driverSignUpSchema = signUpSchema.extend({
+  phone: z.string()
+    .trim()
+    .min(1, { message: "Phone number is required" })
+    .regex(/^[0-9]{10}$/, { message: "Phone number must be exactly 10 digits" }),
   ambulanceNumber: z.string()
     .trim()
     .min(1, { message: "Ambulance number is required" })

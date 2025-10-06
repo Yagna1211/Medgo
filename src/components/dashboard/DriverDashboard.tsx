@@ -90,7 +90,7 @@ export const DriverDashboard = ({ user }: DriverDashboardProps) => {
           .from('driver_status')
           .select('available')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
         
         if (status) {
           setIsAvailable(status.available);
