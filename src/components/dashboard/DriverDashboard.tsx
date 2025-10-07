@@ -163,19 +163,17 @@ export const DriverDashboard = ({ user }: DriverDashboardProps) => {
   const toggleAvailability = async () => {
     if (!user?.id) return;
 
-    if (locationPermission !== 'granted') {
-      toast.error('Please enable location permission to go online');
-      return;
-    }
-
     setIsLoading(true);
     
     try {
-      // Get current location
+      // Get current location (will prompt for permission if needed)
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude, longitude } = position.coords;
           const location = `POINT(${longitude} ${latitude})`;
+
+          // Update permission state
+          setLocationPermission('granted');
 
           const newAvailability = !isAvailable;
 
@@ -195,16 +193,23 @@ export const DriverDashboard = ({ user }: DriverDashboardProps) => {
 
           setIsAvailable(newAvailability);
           toast.success(newAvailability ? 'You are now ONLINE' : 'You are now OFFLINE');
+          setIsLoading(false);
         },
         (error) => {
           logger.error('Geolocation error:', error);
-          toast.error('Failed to get your location. Please check your settings.');
+          setLocationPermission('denied');
+          toast.error('Location permission denied. Please enable it in your browser settings.');
+          setIsLoading(false);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
         }
       );
     } catch (error) {
       logger.error('Error toggling availability:', error);
       toast.error('Failed to update availability');
-    } finally {
       setIsLoading(false);
     }
   };
