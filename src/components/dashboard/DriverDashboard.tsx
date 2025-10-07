@@ -161,14 +161,26 @@ export const DriverDashboard = ({ user }: DriverDashboardProps) => {
   }, [user?.id]);
 
   const toggleAvailability = async () => {
-    if (!user?.id) return;
+    console.log('Toggle clicked, user:', user?.id);
+    if (!user?.id) {
+      console.error('No user ID found');
+      toast.error('User not authenticated');
+      return;
+    }
 
     setIsLoading(true);
+    console.log('Requesting geolocation...');
     
     try {
+      // Check if geolocation is supported
+      if (!navigator.geolocation) {
+        throw new Error('Geolocation is not supported by your browser');
+      }
+
       // Get current location (will prompt for permission if needed)
       navigator.geolocation.getCurrentPosition(
         async (position) => {
+          console.log('Geolocation success:', position.coords);
           const { latitude, longitude } = position.coords;
           const location = `POINT(${longitude} ${latitude})`;
 
@@ -176,9 +188,10 @@ export const DriverDashboard = ({ user }: DriverDashboardProps) => {
           setLocationPermission('granted');
 
           const newAvailability = !isAvailable;
+          console.log('Updating driver status to:', newAvailability);
 
           // Upsert driver_status
-          const { error } = await supabase
+          const { data, error } = await supabase
             .from('driver_status')
             .upsert({
               user_id: user.id,
@@ -187,18 +200,33 @@ export const DriverDashboard = ({ user }: DriverDashboardProps) => {
               updated_at: new Date().toISOString()
             }, {
               onConflict: 'user_id'
-            });
+            })
+            .select();
 
-          if (error) throw error;
+          if (error) {
+            console.error('Database error:', error);
+            throw error;
+          }
 
+          console.log('Status updated successfully:', data);
           setIsAvailable(newAvailability);
-          toast.success(newAvailability ? 'You are now ONLINE' : 'You are now OFFLINE');
+          toast.success(newAvailability ? '✅ You are now ONLINE' : '⚫ You are now OFFLINE');
           setIsLoading(false);
         },
         (error) => {
-          logger.error('Geolocation error:', error);
+          console.error('Geolocation error:', error);
           setLocationPermission('denied');
-          toast.error('Location permission denied. Please enable it in your browser settings.');
+          
+          let errorMessage = 'Location access denied. ';
+          if (error.code === 1) {
+            errorMessage += 'Please enable location permission in your browser settings.';
+          } else if (error.code === 2) {
+            errorMessage += 'Location unavailable. Please try again.';
+          } else if (error.code === 3) {
+            errorMessage += 'Location request timed out. Please try again.';
+          }
+          
+          toast.error(errorMessage);
           setIsLoading(false);
         },
         {
@@ -208,8 +236,9 @@ export const DriverDashboard = ({ user }: DriverDashboardProps) => {
         }
       );
     } catch (error) {
+      console.error('Error toggling availability:', error);
       logger.error('Error toggling availability:', error);
-      toast.error('Failed to update availability');
+      toast.error(error instanceof Error ? error.message : 'Failed to update availability');
       setIsLoading(false);
     }
   };
