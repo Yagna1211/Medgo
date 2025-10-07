@@ -3,8 +3,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   User,
@@ -53,23 +51,11 @@ interface NotificationAlert {
 
 export const DriverDashboard = ({ user }: DriverDashboardProps) => {
   const [activeTab, setActiveTab] = useState("requests");
-  const [isAvailable, setIsAvailable] = useState(false);
   const [requests, setRequests] = useState<AmbulanceRequest[]>([]);
   const [notifications, setNotifications] = useState<NotificationAlert[]>([]);
   const [profile, setProfile] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [locationPermission, setLocationPermission] = useState<'granted' | 'denied' | 'prompt'>('prompt');
 
-  // Check location permission on mount
-  useEffect(() => {
-    if ('permissions' in navigator) {
-      navigator.permissions.query({ name: 'geolocation' }).then((result) => {
-        setLocationPermission(result.state);
-      });
-    }
-  }, []);
-
-  // Fetch driver profile and driver_status
+  // Fetch driver profile
   useEffect(() => {
     const fetchProfile = async () => {
       if (!user?.id) return;
@@ -83,17 +69,6 @@ export const DriverDashboard = ({ user }: DriverDashboardProps) => {
         
         if (profile) {
           setProfile(profile);
-        }
-
-        // Check driver_status for availability
-        const { data: status } = await supabase
-          .from('driver_status')
-          .select('available')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        
-        if (status) {
-          setIsAvailable(status.available);
         }
       } catch (error) {
         logger.error('Error fetching profile:', error);
@@ -160,89 +135,6 @@ export const DriverDashboard = ({ user }: DriverDashboardProps) => {
     fetchRequests();
   }, [user?.id]);
 
-  const toggleAvailability = async () => {
-    console.log('Toggle clicked, user:', user?.id);
-    if (!user?.id) {
-      console.error('No user ID found');
-      toast.error('User not authenticated');
-      return;
-    }
-
-    setIsLoading(true);
-    console.log('Requesting geolocation...');
-    
-    try {
-      // Check if geolocation is supported
-      if (!navigator.geolocation) {
-        throw new Error('Geolocation is not supported by your browser');
-      }
-
-      // Get current location (will prompt for permission if needed)
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          console.log('Geolocation success:', position.coords);
-          const { latitude, longitude } = position.coords;
-          const location = `POINT(${longitude} ${latitude})`;
-
-          // Update permission state
-          setLocationPermission('granted');
-
-          const newAvailability = !isAvailable;
-          console.log('Updating driver status to:', newAvailability);
-
-          // Upsert driver_status
-          const { data, error } = await supabase
-            .from('driver_status')
-            .upsert({
-              user_id: user.id,
-              available: newAvailability,
-              location: location,
-              updated_at: new Date().toISOString()
-            }, {
-              onConflict: 'user_id'
-            })
-            .select();
-
-          if (error) {
-            console.error('Database error:', error);
-            throw error;
-          }
-
-          console.log('Status updated successfully:', data);
-          setIsAvailable(newAvailability);
-          toast.success(newAvailability ? '✅ You are now ONLINE' : '⚫ You are now OFFLINE');
-          setIsLoading(false);
-        },
-        (error) => {
-          console.error('Geolocation error:', error);
-          setLocationPermission('denied');
-          
-          let errorMessage = 'Location access denied. ';
-          if (error.code === 1) {
-            errorMessage += 'Please enable location permission in your browser settings.';
-          } else if (error.code === 2) {
-            errorMessage += 'Location unavailable. Please try again.';
-          } else if (error.code === 3) {
-            errorMessage += 'Location request timed out. Please try again.';
-          }
-          
-          toast.error(errorMessage);
-          setIsLoading(false);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
-        }
-      );
-    } catch (error) {
-      console.error('Error toggling availability:', error);
-      logger.error('Error toggling availability:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to update availability');
-      setIsLoading(false);
-    }
-  };
-
   const acceptRequest = async (requestId: string) => {
     try {
       const { error } = await supabase
@@ -280,59 +172,16 @@ export const DriverDashboard = ({ user }: DriverDashboardProps) => {
           </div>
           
           <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="availability"
-                checked={isAvailable}
-                onCheckedChange={toggleAvailability}
-                disabled={isLoading}
-              />
-              <Label htmlFor="availability" className="font-semibold">
-                {isAvailable ? (
-                  <Badge variant="default" className="bg-green-500">Online</Badge>
-                ) : (
-                  <Badge variant="secondary">Offline</Badge>
-                )}
-              </Label>
-            </div>
+            <Badge variant="default" className="bg-green-500">Always Online</Badge>
           </div>
         </div>
 
-        {locationPermission === 'denied' && (
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              Location permission is denied. Please enable it in your browser settings to receive emergency alerts.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {locationPermission === 'prompt' && !isAvailable && (
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertDescription>
-              You'll be asked for location permission when you go online.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {!isAvailable && (
-          <Alert>
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              You are currently <strong>OFFLINE</strong>. Toggle the switch above to go online and start receiving emergency requests.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {isAvailable && (
-          <Alert className="border-green-500 bg-green-500/10">
-            <CheckCircle className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-600">
-              You are <strong>ONLINE</strong> and will receive emergency alerts from nearby patients.
-            </AlertDescription>
-          </Alert>
-        )}
+        <Alert className="border-green-500 bg-green-500/10">
+          <CheckCircle className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-600">
+            You are <strong>ALWAYS ONLINE</strong> and will receive all emergency alerts from patients.
+          </AlertDescription>
+        </Alert>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="grid w-full grid-cols-3">

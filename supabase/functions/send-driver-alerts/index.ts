@@ -89,18 +89,17 @@ serve(async (req) => {
       return R * c;
     };
 
-    // Fetch available drivers with their locations
-    const { data: driverStatuses, error: statusError } = await supabase
-      .from('driver_status')
-      .select('user_id, location, available')
-      .eq('available', true)
-      .not('location', 'is', null);
+    // Fetch ALL drivers (not just available ones)
+    const { data: driverRoles, error: rolesError } = await supabase
+      .from('user_roles')
+      .select('user_id')
+      .eq('role', 'driver');
 
-    if (statusError) {
-      console.error('Error fetching driver statuses:', statusError);
+    if (rolesError) {
+      console.error('Error fetching driver roles:', rolesError);
       return new Response(JSON.stringify({ 
         success: false, 
-        message: 'Failed to fetch driver statuses',
+        message: 'Failed to fetch drivers',
         driversNotified: 0
       }), {
         status: 500,
@@ -108,11 +107,11 @@ serve(async (req) => {
       });
     }
 
-    if (!driverStatuses || driverStatuses.length === 0) {
-      console.log('No available drivers found');
+    if (!driverRoles || driverRoles.length === 0) {
+      console.log('No drivers registered');
       return new Response(JSON.stringify({ 
         success: true, 
-        message: 'No available drivers to notify',
+        message: 'No drivers registered',
         driversNotified: 0 
       }), {
         status: 200,
@@ -120,45 +119,13 @@ serve(async (req) => {
       });
     }
 
-    // Filter drivers within 50km radius and sort by distance
-    const nearbyDrivers = driverStatuses
-      .map(status => {
-        // Parse location point (format: "(lat,lng)")
-        const locMatch = status.location.match(/\(([-\d.]+),([-\d.]+)\)/);
-        if (!locMatch) return null;
-        
-        const [_, driverLat, driverLng] = locMatch;
-        const distance = haversineKm(
-          customerLat,
-          customerLng,
-          parseFloat(driverLat),
-          parseFloat(driverLng)
-        );
-        
-        return { user_id: status.user_id, distance };
-      })
-      .filter(driver => driver !== null && driver.distance <= 50)
-      .sort((a, b) => a!.distance - b!.distance)
-      .slice(0, 10); // Limit to 10 nearest drivers
+    const allDriverIds = driverRoles.map(d => d.user_id);
 
-    if (nearbyDrivers.length === 0) {
-      console.log('No drivers within 50km radius');
-      return new Response(JSON.stringify({ 
-        success: true, 
-        message: 'No drivers within range',
-        driversNotified: 0 
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Fetch driver profiles for nearby drivers only
-    const nearbyDriverIds = nearbyDrivers.map(d => d!.user_id);
+    // Fetch driver profiles for all drivers
     const { data: allDrivers, error: driversError } = await supabase
       .from('profiles')
       .select('user_id, phone, first_name, last_name')
-      .in('user_id', nearbyDriverIds)
+      .in('user_id', allDriverIds)
       .not('phone', 'is', null);
 
     if (driversError) {
@@ -272,15 +239,15 @@ MEDGO Emergency System`;
 
     console.log(`SMS sent to ${successfulSMS.length} out of ${allDrivers.length} drivers`);
 
-    // Insert notifications into ambulance_notifications table for in-app alerts
-    const notificationInserts = nearbyDrivers.map(driver => ({
+    // Insert notifications into ambulance_notifications table for in-app alerts (for all drivers)
+    const notificationInserts = allDrivers.map(driver => ({
       user_id: customerId,
-      driver_id: driver!.user_id,
+      driver_id: driver.user_id,
       pickup_location: `POINT(${customerLng} ${customerLat})`,
       pickup_address: pickupAddress,
       emergency_type: emergencyType,
       description: description,
-      distance_km: driver!.distance,
+      distance_km: null, // No distance filtering anymore
       status: 'pending'
     }));
 
@@ -306,10 +273,9 @@ MEDGO Emergency System`;
 
     return new Response(JSON.stringify({
       success: true,
-      message: `Emergency alert sent to ${nearbyDrivers.length} ambulance drivers`,
+      message: `Emergency alert sent to ${allDrivers.length} ambulance drivers`,
       requestId: newRequest.id,
-      driversNotified: nearbyDrivers.length,
-      totalDriversFound: allDrivers.length,
+      driversNotified: allDrivers.length,
       smsDelivered: successfulSMS.length
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
