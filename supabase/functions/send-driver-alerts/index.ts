@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.53.0';
+import { Resend } from 'npm:resend@4.0.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,14 +13,15 @@ serve(async (req) => {
   }
 
   try {
-    const apiKey = Deno.env.get('FAST2SMS_API_KEY');
-    if (!apiKey) {
-      return new Response(JSON.stringify({ error: 'SMS API key not configured' }), {
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    if (!resendApiKey) {
+      return new Response(JSON.stringify({ error: 'Email API key not configured' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
+    const resend = new Resend(resendApiKey);
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
@@ -109,10 +111,10 @@ serve(async (req) => {
 
     const allDriverIds = driverRoles.map(d => d.user_id);
 
-    // Fetch driver profiles for all drivers
+    // Fetch driver profiles for all drivers with email
     const { data: allDrivers, error: driversError } = await supabase
       .from('profiles')
-      .select('user_id, phone, first_name, last_name')
+      .select('user_id, email, first_name, last_name')
       .in('user_id', allDriverIds);
 
     if (driversError) {
@@ -162,68 +164,134 @@ serve(async (req) => {
       });
     }
 
-    // Anonymized SMS message - no direct patient phone number
+    // Send email alerts to all drivers
     const googleMapsLink = `https://www.google.com/maps?q=${customerLat},${customerLng}`;
     
-    const smsPromises = allDrivers.map(async (driver) => {
-      if (!driver.phone) {
-        console.log(`No phone number for driver ${driver.user_id}`);
+    const emailPromises = allDrivers.map(async (driver) => {
+      if (!driver.email) {
+        console.log(`No email for driver ${driver.user_id}`);
         return null;
       }
 
-      const cleanPhone = driver.phone.replace(/^\+?91/, '').replace(/\D/g, '');
-      
-      if (cleanPhone.length !== 10) {
-        console.log(`Invalid phone number for driver ${driver.user_id}: ${driver.phone}`);
-        return null;
-      }
-
-      // Anonymized message - patient details removed for privacy
-      const message = `🚨 EMERGENCY ALERT 🚨
-
-Emergency Type: ${emergencyType}
-Location: ${googleMapsLink}
-${pickupAddress ? `Address: ${pickupAddress}` : ''}
-
-Contact dispatch center for patient details.
-MEDGO Emergency System`;
+      const driverName = driver.first_name && driver.last_name 
+        ? `${driver.first_name} ${driver.last_name}`.trim()
+        : 'Driver';
 
       try {
-        const formData = new FormData();
-        formData.append('authorization', apiKey);
-        formData.append('sender_id', 'FSTSMS');
-        formData.append('message', message);
-        formData.append('language', 'english');
-        formData.append('route', 'v3');
-        formData.append('numbers', cleanPhone);
-
-        const response = await fetch('https://www.fast2sms.com/dev/bulkV2', {
-          method: 'POST',
-          body: formData
+        const { error: emailError } = await resend.emails.send({
+          from: 'MEDGO Emergency <onboarding@resend.dev>',
+          to: [driver.email],
+          subject: `🚨 URGENT: ${emergencyType} - Emergency Alert`,
+          html: `
+            <!DOCTYPE html>
+            <html>
+              <head>
+                <meta charset="utf-8">
+                <title>Emergency Alert</title>
+              </head>
+              <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="background-color: #dc2626; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center;">
+                  <h1 style="margin: 0; font-size: 28px;">🚨 EMERGENCY ALERT 🚨</h1>
+                </div>
+                
+                <div style="background-color: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+                  <p style="font-size: 16px; margin-bottom: 20px;">Dear ${driverName},</p>
+                  
+                  <p style="font-size: 16px; font-weight: bold; color: #dc2626; margin-bottom: 20px;">
+                    An emergency ambulance request requires immediate attention!
+                  </p>
+                  
+                  <div style="background-color: white; padding: 20px; border-radius: 8px; border-left: 4px solid #dc2626; margin: 20px 0;">
+                    <h2 style="margin-top: 0; color: #dc2626; font-size: 20px;">Emergency Details:</h2>
+                    
+                    <table style="width: 100%; border-collapse: collapse;">
+                      <tr>
+                        <td style="padding: 8px 0; font-weight: bold; width: 40%;">Emergency Type:</td>
+                        <td style="padding: 8px 0;">${emergencyType}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 8px 0; font-weight: bold;">Patient Name:</td>
+                        <td style="padding: 8px 0;">${customerName}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 8px 0; font-weight: bold;">Contact Phone:</td>
+                        <td style="padding: 8px 0;">${customerPhone}</td>
+                      </tr>
+                      ${pickupAddress ? `
+                      <tr>
+                        <td style="padding: 8px 0; font-weight: bold;">Pickup Address:</td>
+                        <td style="padding: 8px 0;">${pickupAddress}</td>
+                      </tr>
+                      ` : ''}
+                      <tr>
+                        <td style="padding: 8px 0; font-weight: bold;">GPS Location:</td>
+                        <td style="padding: 8px 0;">Lat: ${customerLat}, Lng: ${customerLng}</td>
+                      </tr>
+                      ${description ? `
+                      <tr>
+                        <td style="padding: 8px 0; font-weight: bold; vertical-align: top;">Additional Info:</td>
+                        <td style="padding: 8px 0;">${description}</td>
+                      </tr>
+                      ` : ''}
+                    </table>
+                  </div>
+                  
+                  <div style="text-align: center; margin: 30px 0;">
+                    <a href="${googleMapsLink}" 
+                       style="display: inline-block; background-color: #16a34a; color: white; padding: 15px 40px; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: bold;">
+                      📍 Open Location in Google Maps
+                    </a>
+                  </div>
+                  
+                  <div style="background-color: #fef3c7; border: 1px solid #fbbf24; border-radius: 6px; padding: 15px; margin: 20px 0;">
+                    <p style="margin: 0; font-size: 14px; color: #92400e;">
+                      <strong>⚠️ Action Required:</strong> Please respond immediately if you can assist with this emergency.
+                    </p>
+                  </div>
+                  
+                  <p style="font-size: 14px; color: #6b7280; margin-top: 30px;">
+                    Best regards,<br>
+                    <strong>MEDGO Emergency Response System</strong>
+                  </p>
+                </div>
+                
+                <div style="text-align: center; margin-top: 20px; padding: 15px; color: #6b7280; font-size: 12px;">
+                  <p>This is an automated emergency alert. Please do not reply to this email.</p>
+                  <p>For support, contact the MEDGO dispatch center.</p>
+                </div>
+              </body>
+            </html>
+          `,
         });
 
-        const result = await response.json();
-        console.log(`SMS sent to ${cleanPhone}:`, result);
+        if (emailError) {
+          console.error(`Email error for ${driver.email}:`, emailError);
+          return {
+            email: driver.email,
+            success: false,
+            error: emailError
+          };
+        }
 
+        console.log(`Email sent successfully to ${driver.email}`);
         return {
-          phone: cleanPhone,
-          success: response.ok && result.return,
-          result
+          email: driver.email,
+          success: true
         };
       } catch (error) {
-        console.error(`SMS error for ${cleanPhone}:`, error);
+        console.error(`Email error for ${driver.email}:`, error);
         return {
-          phone: cleanPhone,
+          email: driver.email,
           success: false,
           error: error.message
         };
       }
     });
 
-    const smsResults = await Promise.all(smsPromises);
-    const successfulSMS = smsResults.filter(result => result && result.success);
+    const emailResults = await Promise.all(emailPromises);
+    const successfulEmails = emailResults.filter(result => result && result.success);
 
-    console.log(`SMS sent to ${successfulSMS.length} out of ${allDrivers.length} drivers`);
+    console.log(`Emails sent to ${successfulEmails.length} out of ${allDrivers.length} drivers`);
 
     // Insert notifications into ambulance_notifications table for in-app alerts (for all drivers)
     const notificationInserts = allDrivers.map(driver => ({
@@ -262,7 +330,7 @@ MEDGO Emergency System`;
       message: `Emergency alert sent to ${allDrivers.length} ambulance drivers`,
       requestId: newRequest.id,
       driversNotified: allDrivers.length,
-      smsDelivered: successfulSMS.length
+      emailsDelivered: successfulEmails.length
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
