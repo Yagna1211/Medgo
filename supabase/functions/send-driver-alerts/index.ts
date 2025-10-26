@@ -38,28 +38,6 @@ serve(async (req) => {
       pickupAddress
     } = await req.json();
 
-    // Rate limiting: Check if user has exceeded emergency alert limit (3 per hour)
-    const { data: rateLimitCheck } = await supabase
-      .rpc('check_rate_limit', {
-        _identifier: customerId,
-        _action: 'emergency_alert',
-        _max_attempts: 3,
-        _window_minutes: 60
-      });
-
-    if (rateLimitCheck && !rateLimitCheck.allowed) {
-      return new Response(
-        JSON.stringify({ 
-          error: "Rate limit exceeded. Maximum 3 emergency alerts per hour.",
-          blocked_until: rateLimitCheck.blocked_until
-        }),
-        { 
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 429 
-        }
-      );
-    }
-
     console.log('Received emergency request:', { 
       customerId, 
       emergencyType, 
