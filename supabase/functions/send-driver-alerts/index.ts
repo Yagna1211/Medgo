@@ -275,7 +275,7 @@ serve(async (req) => {
     const notificationInserts = allDrivers.map(driver => ({
       user_id: customerId,
       driver_id: driver.user_id,
-      pickup_location: `POINT(${customerLng} ${customerLat})`,
+      pickup_location: `(${customerLng},${customerLat})`,
       pickup_address: pickupAddress,
       emergency_type: emergencyType,
       description: description,

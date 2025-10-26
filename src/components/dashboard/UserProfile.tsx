@@ -710,7 +710,7 @@ export const UserProfile = ({ user }: UserProfileProps) => {
                 <Button 
                   variant="outline" 
                   className="w-full justify-start"
-                  onClick={() => setShowOtpVerification(true)}
+                  onClick={() => setShowChangePassword(true)}
                 >
                   <Key className="h-4 w-4 mr-2" />
                   Change Password
