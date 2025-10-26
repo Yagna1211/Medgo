@@ -35,14 +35,14 @@ export const EmergencyAmbulance = ({ user }: EmergencyBookingProps) => {
     description: '',
     pickupAddress: ''
   });
-  const [consentGiven, setConsentGiven] = useState(false);
+  const [consentGiven] = useState(true); // Always consent in emergency
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
   const radiusKm = 5;
   const [drivers, setDrivers] = useState<{ driver_id: string; lat: number; lng: number; distance_km: number }[]>([]);
   const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
 
-  // Auto-fill user profile data
+  // Auto-request location on mount and fetch user profile
   useEffect(() => {
     const fetchUserProfile = async () => {
       if (!user?.id) return;
@@ -70,16 +70,14 @@ export const EmergencyAmbulance = ({ user }: EmergencyBookingProps) => {
     };
 
     fetchUserProfile();
+    
+    // Auto-request location on component mount
+    getCurrentLocation();
   }, [user?.id]);
 
   const sendAlerts = async () => {
     if (!userLocation) {
       toast("Please get your location first");
-      return;
-    }
-
-    if (!consentGiven) {
-      toast("Please provide consent to share your information with ambulance drivers");
       return;
     }
     
@@ -120,8 +118,7 @@ export const EmergencyAmbulance = ({ user }: EmergencyBookingProps) => {
           customerLng: userLocation[0],
           emergencyType: bookingDetails.emergencyType,
           description: bookingDetails.description,
-          pickupAddress: bookingDetails.pickupAddress,
-          consentGiven
+          pickupAddress: bookingDetails.pickupAddress
         }
       });
       
@@ -225,11 +222,27 @@ const getCurrentLocation = () => {
   setIsLoadingLocation(true);
   if ("geolocation" in navigator) {
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
         const { latitude, longitude } = position.coords;
         setUserLocation([longitude, latitude]);
         setIsLoadingLocation(false);
         toast("Location found successfully!");
+        
+        // Auto-fill pickup address using reverse geocoding
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+          );
+          const data = await response.json();
+          if (data.display_name) {
+            setBookingDetails(prev => ({
+              ...prev,
+              pickupAddress: data.display_name
+            }));
+          }
+        } catch (error) {
+          logger.error("Error reverse geocoding:", error);
+        }
       },
       (error) => {
         logger.error("Error getting location:", error);
@@ -437,33 +450,14 @@ const getCurrentLocation = () => {
       </div>
 
       <Alert>
-        <Heart className="h-4 w-4" />
+        <ShieldAlert className="h-4 w-4" />
         <AlertDescription>
-          ⚡ One-click emergency: Auto-fills your profile data and sends instant alerts to nearby drivers.
+          🚨 Emergency mode: Location auto-requested, profile auto-filled, and your information will be shared with all ambulance drivers for immediate assistance.
         </AlertDescription>
       </Alert>
 
-      <div className="flex items-center space-x-2 p-4 border rounded-lg bg-muted/50">
-        <Checkbox 
-          id="consent" 
-          checked={consentGiven}
-          onCheckedChange={(checked) => setConsentGiven(checked as boolean)}
-        />
-        <div className="grid gap-1.5 leading-none">
-          <label
-            htmlFor="consent"
-            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-          >
-            I consent to sharing my contact information
-          </label>
-          <p className="text-xs text-muted-foreground">
-            Your name, phone number, and location will be shared with nearby ambulance drivers to provide emergency assistance.
-          </p>
-        </div>
-      </div>
-
       <div className="flex gap-2">
-        <Button onClick={sendAlerts} disabled={isBooking || !userLocation || !consentGiven} className="flex-1 bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+        <Button onClick={sendAlerts} disabled={isBooking || !userLocation} className="flex-1 bg-destructive hover:bg-destructive/90 text-destructive-foreground">
           {isBooking ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />

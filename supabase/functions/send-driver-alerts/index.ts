@@ -33,20 +33,8 @@ serve(async (req) => {
       customerLng, 
       emergencyType,
       description,
-      pickupAddress,
-      consentGiven
+      pickupAddress
     } = await req.json();
-
-    // Verify consent was given
-    if (!consentGiven) {
-      return new Response(
-        JSON.stringify({ error: "Patient consent required to share information" }),
-        { 
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 400 
-        }
-      );
-    }
 
     // Rate limiting: Check if user has exceeded emergency alert limit (3 per hour)
     const { data: rateLimitCheck } = await supabase
@@ -158,7 +146,6 @@ serve(async (req) => {
         customer_id: customerId,
         customer_name: customerName,
         customer_phone: customerPhone,
-        customer_location: `POINT(${customerLng} ${customerLat})`,
         pickup_address: pickupAddress,
         emergency_type: emergencyType,
         description: description,
@@ -267,7 +254,7 @@ MEDGO Emergency System`;
         user_id: customerId,
         recipient_count: successfulSMS.length,
         emergency_type: emergencyType,
-        consent_given: consentGiven
+        consent_given: true
       });
 
     return new Response(JSON.stringify({
