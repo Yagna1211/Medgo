@@ -99,27 +99,42 @@ export const DriverDashboard = ({
     fetchProfile();
   }, [user?.id]);
 
-  // Subscribe to realtime notifications
+  // Subscribe to realtime notifications (both INSERT and UPDATE)
   useEffect(() => {
     if (!user?.id) return;
-    const channel = supabase.channel('ambulance-notifications').on('postgres_changes', {
-      event: 'INSERT',
-      schema: 'public',
-      table: 'ambulance_notifications',
-      filter: `driver_id=eq.${user.id}`
-    }, payload => {
-      const newNotification = payload.new as NotificationAlert;
-      setNotifications(prev => [newNotification, ...prev]);
-      toast(`🚨 NEW EMERGENCY REQUEST: ${newNotification.emergency_type}`);
+    const channel = supabase
+      .channel('ambulance-notifications')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'ambulance_notifications',
+        filter: `driver_id=eq.${user.id}`
+      }, payload => {
+        const newNotification = payload.new as NotificationAlert;
+        setNotifications(prev => [newNotification, ...prev]);
+        toast(`🚨 NEW EMERGENCY REQUEST: ${newNotification.emergency_type}`);
 
-      // Play notification sound
-      try {
-        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-        audio.play().catch(err => logger.error('Audio play failed:', err));
-      } catch (err) {
-        logger.error('Audio creation failed:', err);
-      }
-    }).subscribe();
+        // Play notification sound
+        try {
+          const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+          audio.play().catch(err => logger.error('Audio play failed:', err));
+        } catch (err) {
+          logger.error('Audio creation failed:', err);
+        }
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'ambulance_notifications',
+        filter: `driver_id=eq.${user.id}`
+      }, payload => {
+        const updatedNotification = payload.new as NotificationAlert;
+        // If status changed to 'accepted', update the UI to show "Already accepted"
+        setNotifications(prev => 
+          prev.map(n => n.id === updatedNotification.id ? updatedNotification : n)
+        );
+      })
+      .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
@@ -145,7 +160,7 @@ export const DriverDashboard = ({
     fetchRequests();
   }, [user?.id]);
 
-  // Fetch existing notifications for this driver (both pending and accepted)
+  // Fetch existing notifications for this driver (only pending)
   useEffect(() => {
     const fetchNotifications = async () => {
       if (!user?.id) return;
@@ -154,7 +169,7 @@ export const DriverDashboard = ({
           .from('ambulance_notifications')
           .select('*')
           .eq('driver_id', user.id)
-          .in('status', ['pending', 'accepted'])
+          .eq('status', 'pending')
           .order('created_at', { ascending: false });
         
         if (error) throw error;
