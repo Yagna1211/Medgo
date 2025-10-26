@@ -307,6 +307,22 @@ export const UserProfile = ({ user }: UserProfileProps) => {
         .select('*')
         .eq('user_id', user.id);
 
+      // Check if user is a driver and fetch history
+      const { data: userRole } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+
+      let driverHistory = null;
+      if (userRole?.role === 'driver') {
+        const { data } = await supabase
+          .from('driver_request_history')
+          .select('*')
+          .eq('driver_id', user.id);
+        driverHistory = data;
+      }
+
       // Create PDF
       const pdf = new jsPDF();
       
@@ -370,6 +386,42 @@ export const UserProfile = ({ user }: UserProfileProps) => {
         pdf.text(`- ${analysis.symptoms?.join(', ') || 'N/A'} (${new Date(analysis.created_at).toLocaleDateString()})`, 25, yPos);
         yPos += 7;
       });
+
+      // Driver History (if applicable)
+      if (driverHistory && driverHistory.length > 0) {
+        yPos += 15;
+        if (yPos > 250) {
+          pdf.addPage();
+          yPos = 20;
+        }
+        pdf.setFontSize(14);
+        pdf.text(`Driver Request History`, 20, yPos);
+        yPos += 10;
+        pdf.setFontSize(10);
+        
+        const accepted = driverHistory.filter(h => h.action === 'accepted').length;
+        const rejected = driverHistory.filter(h => h.action === 'rejected').length;
+        
+        pdf.text(`Total Requests: ${driverHistory.length}`, 25, yPos);
+        yPos += 7;
+        pdf.setTextColor(0, 128, 0);
+        pdf.text(`Accepted: ${accepted}`, 25, yPos);
+        yPos += 7;
+        pdf.setTextColor(255, 0, 0);
+        pdf.text(`Rejected: ${rejected}`, 25, yPos);
+        yPos += 10;
+        pdf.setTextColor(0, 0, 0);
+        
+        driverHistory.slice(0, 5).forEach((record: any) => {
+          if (yPos > 270) {
+            pdf.addPage();
+            yPos = 20;
+          }
+          const actionColor = record.action === 'accepted' ? '(Accepted)' : '(Rejected)';
+          pdf.text(`- ${record.emergency_type} ${actionColor} - ${new Date(record.created_at).toLocaleDateString()}`, 25, yPos);
+          yPos += 7;
+        });
+      }
 
       // Save PDF
       pdf.save(`medgo-user-data-${new Date().toISOString().split('T')[0]}.pdf`);

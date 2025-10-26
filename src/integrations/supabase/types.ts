@@ -28,7 +28,7 @@ export type Database = {
           patient_name: string
           patient_phone: string
           pickup_address: string | null
-          pickup_location: unknown | null
+          pickup_location: unknown
           status: string
           updated_at: string
           user_id: string
@@ -46,7 +46,7 @@ export type Database = {
           patient_name: string
           patient_phone: string
           pickup_address?: string | null
-          pickup_location?: unknown | null
+          pickup_location?: unknown
           status?: string
           updated_at?: string
           user_id: string
@@ -64,7 +64,7 @@ export type Database = {
           patient_name?: string
           patient_phone?: string
           pickup_address?: string | null
-          pickup_location?: unknown | null
+          pickup_location?: unknown
           status?: string
           updated_at?: string
           user_id?: string
@@ -114,7 +114,6 @@ export type Database = {
         Row: {
           created_at: string
           customer_id: string
-          customer_location: unknown
           customer_name: string
           customer_phone: string
           description: string | null
@@ -128,7 +127,6 @@ export type Database = {
         Insert: {
           created_at?: string
           customer_id: string
-          customer_location: unknown
           customer_name: string
           customer_phone: string
           description?: string | null
@@ -142,7 +140,6 @@ export type Database = {
         Update: {
           created_at?: string
           customer_id?: string
-          customer_location?: unknown
           customer_name?: string
           customer_phone?: string
           description?: string | null
@@ -155,25 +152,64 @@ export type Database = {
         }
         Relationships: []
       }
+      driver_request_history: {
+        Row: {
+          action: string
+          completed_at: string | null
+          created_at: string
+          customer_name: string
+          customer_phone: string
+          driver_id: string
+          emergency_type: string
+          id: string
+          pickup_address: string | null
+          request_id: string | null
+        }
+        Insert: {
+          action: string
+          completed_at?: string | null
+          created_at?: string
+          customer_name: string
+          customer_phone: string
+          driver_id: string
+          emergency_type: string
+          id?: string
+          pickup_address?: string | null
+          request_id?: string | null
+        }
+        Update: {
+          action?: string
+          completed_at?: string | null
+          created_at?: string
+          customer_name?: string
+          customer_phone?: string
+          driver_id?: string
+          emergency_type?: string
+          id?: string
+          pickup_address?: string | null
+          request_id?: string | null
+        }
+        Relationships: []
+      }
       driver_status: {
         Row: {
           available: boolean
           created_at: string | null
-          location: unknown | null
+          location: unknown
           updated_at: string
           user_id: string
         }
         Insert: {
           available?: boolean
           created_at?: string | null
-          location?: unknown | null
+          location?: unknown
           updated_at?: string
           user_id: string
         }
         Update: {
           available?: boolean
           created_at?: string | null
-          location?: unknown | null
+          location?: unknown
           updated_at?: string
           user_id?: string
         }
@@ -427,10 +463,7 @@ export type Database = {
         }
         Returns: Json
       }
-      cleanup_old_location_data: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      cleanup_old_location_data: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

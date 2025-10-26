@@ -23,7 +23,19 @@ interface AmbulanceRequest {
   description?: string;
   created_at: string;
   status: string;
-  customer_location: unknown;
+  customer_location?: unknown;
+  user_id?: string;
+}
+
+interface DriverHistory {
+  id: string;
+  customer_name: string;
+  customer_phone: string;
+  emergency_type: string;
+  pickup_address?: string;
+  action: 'accepted' | 'rejected';
+  created_at: string;
+  completed_at?: string;
 }
 interface NotificationAlert {
   id: string;
@@ -42,6 +54,7 @@ export const DriverDashboard = ({
   const [isAvailable, setIsAvailable] = useState(false);
   const [requests, setRequests] = useState<AmbulanceRequest[]>([]);
   const [notifications, setNotifications] = useState<NotificationAlert[]>([]);
+  const [history, setHistory] = useState<DriverHistory[]>([]);
   const [profile, setProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [locationPermission, setLocationPermission] = useState<'granted' | 'denied' | 'prompt'>('prompt');
@@ -136,8 +149,9 @@ export const DriverDashboard = ({
       try {
         const { data, error } = await supabase
           .from('ambulance_notifications')
-          .select('*')
+          .select('*, ambulance_requests!inner(customer_name, customer_phone)')
           .eq('driver_id', user.id)
+          .eq('status', 'pending')
           .order('created_at', { ascending: false });
         
         if (error) throw error;
@@ -147,6 +161,26 @@ export const DriverDashboard = ({
       }
     };
     fetchNotifications();
+  }, [user?.id]);
+
+  // Fetch driver history
+  useEffect(() => {
+    const fetchHistory = async () => {
+      if (!user?.id) return;
+      try {
+        const { data, error } = await supabase
+          .from('driver_request_history')
+          .select('*')
+          .eq('driver_id', user.id)
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        if (data) setHistory(data as DriverHistory[]);
+      } catch (error) {
+        logger.error('Error fetching history:', error);
+      }
+    };
+    fetchHistory();
   }, [user?.id]);
   const toggleAvailability = async () => {
     console.log('Toggle clicked, user:', user?.id);
@@ -222,26 +256,98 @@ export const DriverDashboard = ({
       setIsLoading(false);
     }
   };
-  const acceptRequest = async (requestId: string) => {
+  const acceptNotification = async (notification: NotificationAlert) => {
     try {
-      const {
-        error
-      } = await supabase.from('ambulance_requests').update({
-        status: 'accepted'
-      }).eq('id', requestId);
-      if (error) throw error;
-      toast.success('Request accepted!');
+      // Extract location coordinates
+      const locationStr = notification.pickup_location as any;
+      let lat: number | null = null;
+      let lng: number | null = null;
+      
+      if (typeof locationStr === 'string') {
+        const match = locationStr.match(/\(([^,]+),([^)]+)\)/);
+        if (match) {
+          lng = parseFloat(match[1]);
+          lat = parseFloat(match[2]);
+        }
+      }
 
-      // Refresh requests
-      const {
-        data
-      } = await supabase.from('ambulance_requests').select('*').eq('driver_id', user.id).order('created_at', {
-        ascending: false
-      });
-      if (data) setRequests(data);
+      // Update notification status
+      await supabase
+        .from('ambulance_notifications')
+        .update({ status: 'accepted' })
+        .eq('id', notification.id);
+
+      // Add to history
+      await supabase
+        .from('driver_request_history')
+        .insert({
+          driver_id: user.id,
+          customer_name: 'Emergency Request',
+          customer_phone: 'N/A',
+          emergency_type: notification.emergency_type,
+          pickup_address: notification.pickup_address,
+          action: 'accepted'
+        });
+
+      // Remove from notifications
+      setNotifications(prev => prev.filter(n => n.id !== notification.id));
+      
+      // Refresh history
+      const { data: historyData } = await supabase
+        .from('driver_request_history')
+        .select('*')
+        .eq('driver_id', user.id)
+        .order('created_at', { ascending: false });
+      if (historyData) setHistory(historyData as DriverHistory[]);
+
+      toast.success('Request accepted! Opening directions...');
+
+      // Open Google Maps with directions
+      if (lat && lng) {
+        const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+        window.open(mapsUrl, '_blank');
+      }
     } catch (error) {
-      logger.error('Error accepting request:', error);
+      logger.error('Error accepting notification:', error);
       toast.error('Failed to accept request');
+    }
+  };
+
+  const rejectNotification = async (notification: NotificationAlert) => {
+    try {
+      // Delete notification
+      await supabase
+        .from('ambulance_notifications')
+        .delete()
+        .eq('id', notification.id);
+
+      // Add to history
+      await supabase
+        .from('driver_request_history')
+        .insert({
+          driver_id: user.id,
+          customer_name: 'Emergency Request',
+          customer_phone: 'N/A',
+          emergency_type: notification.emergency_type,
+          pickup_address: notification.pickup_address,
+          action: 'rejected'
+        });
+
+      // Remove from notifications
+      setNotifications(prev => prev.filter(n => n.id !== notification.id));
+      
+      // Refresh history
+      const { data: historyData } = await supabase
+        .from('driver_request_history')
+        .select('*')
+        .eq('driver_id', user.id)
+        .order('created_at', { ascending: false });
+      if (historyData) setHistory(historyData as DriverHistory[]);
+
+      toast.success('Request rejected');
+    } catch (error) {
+      logger.error('Error rejecting notification:', error);
+      toast.error('Failed to reject request');
     }
   };
   return <div className="min-h-screen bg-background p-6">
@@ -262,17 +368,21 @@ export const DriverDashboard = ({
         
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="requests">
               <Car className="mr-2 h-4 w-4" />
               Requests
+              {notifications.length > 0 && <Badge variant="destructive" className="ml-2">
+                  {notifications.length}
+                </Badge>}
             </TabsTrigger>
             <TabsTrigger value="notifications">
               <Bell className="mr-2 h-4 w-4" />
               Notifications
-              {notifications.length > 0 && <Badge variant="destructive" className="ml-2">
-                  {notifications.length}
-                </Badge>}
+            </TabsTrigger>
+            <TabsTrigger value="history">
+              <Clock className="mr-2 h-4 w-4" />
+              History
             </TabsTrigger>
             <TabsTrigger value="profile">
               <User className="mr-2 h-4 w-4" />
@@ -281,64 +391,12 @@ export const DriverDashboard = ({
           </TabsList>
 
           <TabsContent value="requests" className="space-y-4">
-            {requests.length === 0 ? <Card>
-                <CardContent className="p-12 text-center">
-                  <Car className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">No requests yet</p>
-                </CardContent>
-              </Card> : requests.map(request => <Card key={request.id}>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle>{request.emergency_type}</CardTitle>
-                        <CardDescription>
-                          Request ID: {request.id.slice(0, 8)}...
-                        </CardDescription>
-                      </div>
-                      <Badge variant={request.status === 'accepted' ? 'default' : request.status === 'pending' ? 'secondary' : 'destructive'}>
-                        {request.status}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center text-sm">
-                      <User className="mr-2 h-4 w-4 text-muted-foreground" />
-                      <span>{request.customer_name}</span>
-                    </div>
-                    <div className="flex items-center text-sm">
-                      <Phone className="mr-2 h-4 w-4 text-muted-foreground" />
-                      <span>{request.customer_phone}</span>
-                    </div>
-                    {request.pickup_address && <div className="flex items-center text-sm">
-                        <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
-                        <span>{request.pickup_address}</span>
-                      </div>}
-                    {request.description && <div className="flex items-start text-sm">
-                        <Info className="mr-2 h-4 w-4 text-muted-foreground mt-0.5" />
-                        <span>{request.description}</span>
-                      </div>}
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Clock className="mr-2 h-4 w-4" />
-                      <span>{new Date(request.created_at).toLocaleString()}</span>
-                    </div>
-                    
-                    {request.status === 'pending' && <div className="flex gap-2 pt-2">
-                        <Button onClick={() => acceptRequest(request.id)} className="flex-1">
-                          <CheckCircle className="mr-2 h-4 w-4" />
-                          Accept Request
-                        </Button>
-                      </div>}
-                  </CardContent>
-                </Card>)}
-          </TabsContent>
-
-          <TabsContent value="notifications" className="space-y-4">
             {notifications.length === 0 ? <Card>
                 <CardContent className="p-12 text-center">
-                  <Bell className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">No notifications</p>
+                  <Car className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">No emergency requests</p>
                 </CardContent>
-              </Card> : notifications.map(notification => <Card key={notification.id}>
+              </Card> : notifications.map(notification => <Card key={notification.id} className="border-red-500">
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div>
@@ -349,9 +407,7 @@ export const DriverDashboard = ({
                           {notification.distance_km && `${notification.distance_km.toFixed(1)} km away`}
                         </CardDescription>
                       </div>
-                      <Badge variant="destructive">
-                        {notification.status}
-                      </Badge>
+                      <Badge variant="destructive">URGENT</Badge>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -367,8 +423,120 @@ export const DriverDashboard = ({
                       <Clock className="mr-2 h-4 w-4" />
                       <span>{new Date(notification.created_at).toLocaleString()}</span>
                     </div>
+                    
+                    <div className="flex gap-2 pt-2">
+                      <Button 
+                        onClick={() => acceptNotification(notification)} 
+                        className="flex-1 bg-green-600 hover:bg-green-700"
+                      >
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Accept
+                      </Button>
+                      <Button 
+                        onClick={() => rejectNotification(notification)} 
+                        variant="destructive"
+                        className="flex-1"
+                      >
+                        <XCircle className="mr-2 h-4 w-4" />
+                        Reject
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>)}
+          </TabsContent>
+
+          <TabsContent value="notifications" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>All Notifications</CardTitle>
+                <CardDescription>View all emergency notifications sent to you</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Active emergency requests appear in the Requests tab. Use Accept/Reject buttons to respond.
+                </p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="history" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Request History</CardTitle>
+                <CardDescription>
+                  Track your accepted and rejected requests
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            {history.length === 0 ? (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <Clock className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">No history yet</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">Total Requests</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{history.length}</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-green-600">Accepted</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-green-600">
+                        {history.filter(h => h.action === 'accepted').length}
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-red-600">Rejected</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-red-600">
+                        {history.filter(h => h.action === 'rejected').length}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className="space-y-3">
+                  {history.map(record => (
+                    <Card key={record.id}>
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-base">{record.emergency_type}</CardTitle>
+                          <Badge variant={record.action === 'accepted' ? 'default' : 'destructive'}>
+                            {record.action}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        {record.pickup_address && (
+                          <div className="flex items-center text-sm">
+                            <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
+                            <span>{record.pickup_address}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center text-sm text-muted-foreground">
+                          <Clock className="mr-2 h-4 w-4" />
+                          <span>{new Date(record.created_at).toLocaleString()}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </>
+            )}
           </TabsContent>
 
           <TabsContent value="profile">
