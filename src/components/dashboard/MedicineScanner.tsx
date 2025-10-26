@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +21,9 @@ import {
   AlertCircle,
   Star,
   Database,
-  ExternalLink
+  ExternalLink,
+  Mic,
+  MicOff
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -55,20 +57,74 @@ export const MedicineScanner = ({ user }: MedicineScannerProps) => {
   const [extractedText, setExtractedText] = useState<string>('');
   const [manualSearchTerm, setManualSearchTerm] = useState<string>('');
   const [showManualSearch, setShowManualSearch] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
 
-// On-device OCR using Tesseract.js (tuned for labels)
-const ocrWithTesseract = async (file: File): Promise<string> => {
-  const dataUrl = await new Promise<string>((resolve) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.readAsDataURL(file);
-  });
-  const result = await Tesseract.recognize(dataUrl, 'eng', {
-    logger: m => console.log(m)
-  });
-  return result.data.text;
-};
+  useEffect(() => {
+    // Initialize speech recognition
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+      recognitionRef.current.lang = 'en-US';
+
+      recognitionRef.current.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setManualSearchTerm(transcript);
+        toast(`Heard: "${transcript}"`);
+        // Auto-search after voice input
+        setTimeout(() => {
+          analyzeMedicine(null, transcript);
+        }, 500);
+      };
+
+      recognitionRef.current.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        setIsListening(false);
+        toast('Voice recognition error. Please try again.');
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+      };
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, []);
+
+  const toggleVoiceInput = () => {
+    if (!recognitionRef.current) {
+      toast('Voice recognition not supported in this browser');
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      recognitionRef.current.start();
+      setIsListening(true);
+      toast('Listening... Say the medicine name');
+    }
+  };
+
+  const ocrWithTesseract = async (file: File): Promise<string> => {
+    const dataUrl = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.readAsDataURL(file);
+    });
+    const result = await Tesseract.recognize(dataUrl, 'eng', {
+      logger: m => console.log(m)
+    });
+    return result.data.text;
+  };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -110,27 +166,27 @@ const ocrWithTesseract = async (file: File): Promise<string> => {
     }
   };
 
-const startAnalysis = async () => {
-  if (!selectedFile) {
-    toast("Please upload an image first.");
-    return;
-  }
-  // Prefer on-device OCR to avoid server OCR billing issues
-  setIsAnalyzing(true);
-  try {
-    const text = await ocrWithTesseract(selectedFile);
-    if (text && text.length > 3) {
-      await analyzeMedicine(null, text);
-    } else {
-      throw new Error('Could not read text from image');
+  const startAnalysis = async () => {
+    if (!selectedFile) {
+      toast("Please upload an image first.");
+      return;
     }
-  } catch (e: any) {
-    toast(`OCR failed: ${e.message}. Falling back to server...`);
-    await analyzeMedicine(selectedFile);
-  } finally {
-    setIsAnalyzing(false);
-  }
-};
+    // Prefer on-device OCR to avoid server OCR billing issues
+    setIsAnalyzing(true);
+    try {
+      const text = await ocrWithTesseract(selectedFile);
+      if (text && text.length > 3) {
+        await analyzeMedicine(null, text);
+      } else {
+        throw new Error('Could not read text from image');
+      }
+    } catch (e: any) {
+      toast(`OCR failed: ${e.message}. Falling back to server...`);
+      await analyzeMedicine(selectedFile);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   const startManualSearch = async () => {
     if (!manualSearchTerm.trim()) {
@@ -278,7 +334,7 @@ const startAnalysis = async () => {
           Medicine Scanner
         </h2>
         <p className="text-muted-foreground">
-          Upload a clear photo of your medicine or search manually for accurate identification
+          Upload a clear photo, search manually, or use voice input for accurate identification
         </p>
       </div>
 
@@ -291,7 +347,7 @@ const startAnalysis = async () => {
               Medicine Photo & Search
             </CardTitle>
             <CardDescription>
-              Upload a medicine photo or search manually if scanning fails
+              Upload a medicine photo, search manually, or use voice input
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -346,15 +402,22 @@ const startAnalysis = async () => {
             <div className="space-y-3">
               <Separator />
               <div className="space-y-2">
-                <Label htmlFor="manual-search">Manual Search</Label>
+                <Label htmlFor="manual-search">Manual / Voice Search</Label>
                 <div className="flex gap-2">
                   <Input
                     id="manual-search"
-                    placeholder="Enter medicine name (e.g., Aspirin, Paracetamol)"
+                    placeholder="Enter medicine name or use voice"
                     value={manualSearchTerm}
                     onChange={(e) => setManualSearchTerm(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && startManualSearch()}
                   />
+                  <Button 
+                    onClick={toggleVoiceInput}
+                    variant={isListening ? "destructive" : "secondary"}
+                    disabled={isAnalyzing}
+                  >
+                    {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                  </Button>
                   <Button 
                     onClick={startManualSearch}
                     disabled={isAnalyzing || !manualSearchTerm.trim()}
@@ -363,6 +426,11 @@ const startAnalysis = async () => {
                     <Search className="h-4 w-4" />
                   </Button>
                 </div>
+                {isListening && (
+                  <p className="text-sm text-muted-foreground animate-pulse">
+                    Listening... Say the medicine name
+                  </p>
+                )}
               </div>
             </div>
 
@@ -401,10 +469,10 @@ const startAnalysis = async () => {
             {!medicineMatches.length && !isAnalyzing && (
               <div className="text-center py-8 text-muted-foreground">
                 <Info className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Upload a medicine photo or search manually to see results</p>
+                <p>Upload a medicine photo, use voice, or search manually to see results</p>
                 {showManualSearch && (
                   <p className="text-sm mt-2 text-orange-600">
-                    Photo scanning failed. Try manual search above.
+                    Photo scanning failed. Try manual/voice search above.
                   </p>
                 )}
               </div>
@@ -479,25 +547,12 @@ const startAnalysis = async () => {
                       </Badge>
                     </div>
                   </div>
-                  <p className="text-muted-foreground">
-                    <strong>Generic:</strong> {selectedMatch.genericName} • <strong>Manufacturer:</strong> {selectedMatch.manufacturer}
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Generic Name:</strong> {selectedMatch.genericName}
                   </p>
-                  
-                  {selectedMatch.isRecalled && (
-                    <Alert variant="destructive">
-                      <AlertTriangle className="h-4 w-4" />
-                      <AlertDescription>
-                        <strong>WARNING:</strong> This medicine may have been recalled. Please verify with your healthcare provider.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-
-                  <Alert>
-                    <Clock className="h-4 w-4" />
-                    <AlertDescription>
-                      <strong>Expiry Status:</strong> {selectedMatch.expiryStatus}
-                    </AlertDescription>
-                  </Alert>
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Manufacturer:</strong> {selectedMatch.manufacturer}
+                  </p>
                 </div>
 
                 <Separator />
@@ -505,13 +560,10 @@ const startAnalysis = async () => {
                 {/* Active Ingredients */}
                 {selectedMatch.activeIngredients.length > 0 && (
                   <div>
-                    <h4 className="font-semibold mb-2 flex items-center gap-2">
-                      <Zap className="h-4 w-4 text-orange-500" />
-                      Active Ingredients
-                    </h4>
+                    <h4 className="font-semibold mb-2">Active Ingredients</h4>
                     <div className="flex flex-wrap gap-2">
                       {selectedMatch.activeIngredients.map((ingredient, index) => (
-                        <Badge key={index} variant="outline">
+                        <Badge key={index} variant="secondary">
                           {ingredient}
                         </Badge>
                       ))}
@@ -520,32 +572,25 @@ const startAnalysis = async () => {
                 )}
 
                 {/* Uses */}
-                {selectedMatch.uses.length > 0 && (
-                  <div>
-                    <h4 className="font-semibold mb-2 flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      Medical Uses
-                    </h4>
-                    <ul className="space-y-1 text-sm">
-                      {selectedMatch.uses.map((use, index) => (
-                        <li key={index} className="flex items-start gap-2">
-                          <span className="text-green-500 mt-1">•</span>
-                          {use}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                <div>
+                  <h4 className="font-semibold mb-2">Uses</h4>
+                  <ul className="space-y-1 text-sm">
+                    {selectedMatch.uses.slice(0, 5).map((use, index) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                        {use}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
 
                 {/* Dosage */}
                 <div>
                   <h4 className="font-semibold mb-2 flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-blue-500" />
-                    Recommended Dosage
+                    <Zap className="h-4 w-4 text-blue-500" />
+                    Dosage
                   </h4>
-                  <p className="text-sm bg-secondary/20 text-foreground p-3 rounded-lg border border-border">
-                    {selectedMatch.dosage}
-                  </p>
+                  <p className="text-sm">{selectedMatch.dosage}</p>
                 </div>
 
                 {/* Side Effects */}
@@ -553,10 +598,10 @@ const startAnalysis = async () => {
                   <div>
                     <h4 className="font-semibold mb-2 flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4 text-orange-500" />
-                      Possible Side Effects
+                      Side Effects
                     </h4>
                     <ul className="space-y-1 text-sm">
-                      {selectedMatch.sideEffects.map((effect, index) => (
+                      {selectedMatch.sideEffects.slice(0, 5).map((effect, index) => (
                         <li key={index} className="flex items-start gap-2">
                           <span className="text-orange-500 mt-1">•</span>
                           {effect}
@@ -571,10 +616,10 @@ const startAnalysis = async () => {
                   <div>
                     <h4 className="font-semibold mb-2 flex items-center gap-2">
                       <Shield className="h-4 w-4 text-red-500" />
-                      Important Precautions
+                      Precautions
                     </h4>
                     <ul className="space-y-1 text-sm">
-                      {selectedMatch.precautions.map((precaution, index) => (
+                      {selectedMatch.precautions.slice(0, 5).map((precaution, index) => (
                         <li key={index} className="flex items-start gap-2">
                           <span className="text-red-500 mt-1">•</span>
                           {precaution}
@@ -584,15 +629,20 @@ const startAnalysis = async () => {
                   </div>
                 )}
 
+                {/* Recall Status */}
+                {selectedMatch.isRecalled && (
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      <strong>WARNING:</strong> This medicine may be subject to a recall. Please consult your healthcare provider.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 <Alert>
                   <Info className="h-4 w-4" />
-                  <AlertDescription className="space-y-2">
-                    <p>This information is sourced from official medical databases and is for educational purposes only.</p>
-                    <p><strong>Always consult a healthcare professional before taking any medication.</strong></p>
-                    <div className="flex items-center gap-1 text-xs">
-                      <ExternalLink className="h-3 w-3" />
-                      <span>Data from: FDA OpenFDA, RxNorm, NIH</span>
-                    </div>
+                  <AlertDescription>
+                    Always consult a healthcare professional before using any medication. This information is for reference only.
                   </AlertDescription>
                 </Alert>
               </div>

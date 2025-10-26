@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,9 @@ import {
   Activity,
   Heart,
   Brain,
-  Stethoscope
+  Stethoscope,
+  Mic,
+  MicOff
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,6 +55,33 @@ export const SymptomAnalyzer = ({ user }: SymptomAnalyzerProps) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<SymptomAnalysis | null>(null);
   const [symptomSuggestions, setSymptomSuggestions] = useState<string[]>([]);
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  useEffect(() => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+      recognitionRef.current.lang = 'en-US';
+
+      recognitionRef.current.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        const symptomsArray = transcript.split(/,| and /).map(s => s.trim()).filter(Boolean);
+        setSymptoms(prev => [...prev, ...symptomsArray]);
+        toast(`Heard: "${transcript}"`);
+      };
+
+      recognitionRef.current.onerror = () => {
+        setIsListening(false);
+        toast('Voice error. Try again.');
+      };
+
+      recognitionRef.current.onend = () => setIsListening(false);
+    }
+    return () => recognitionRef.current?.stop();
+  }, []);
 
   const addSymptom = () => {
     if (currentSymptom.trim() && !symptoms.includes(currentSymptom.trim())) {
@@ -86,6 +115,20 @@ export const SymptomAnalyzer = ({ user }: SymptomAnalyzerProps) => {
 
   const removeSymptom = (symptom: string) => {
     setSymptoms(symptoms.filter(s => s !== symptom));
+  };
+
+  const toggleVoiceInput = () => {
+    if (!recognitionRef.current) {
+      toast('Voice not supported');
+      return;
+    }
+    if (isListening) {
+      recognitionRef.current.stop();
+    } else {
+      recognitionRef.current.start();
+      setIsListening(true);
+      toast('Listening... Describe symptoms');
+    }
   };
 
   const analyzeSymptoms = async () => {
@@ -252,7 +295,7 @@ export const SymptomAnalyzer = ({ user }: SymptomAnalyzerProps) => {
               {isAnalyzing ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Analyzing Symptoms...
+                  Analyzing...
                 </>
               ) : (
                 <>
@@ -260,6 +303,15 @@ export const SymptomAnalyzer = ({ user }: SymptomAnalyzerProps) => {
                   Analyze Symptoms
                 </>
               )}
+            </Button>
+
+            <Button 
+              onClick={toggleVoiceInput}
+              variant={isListening ? "destructive" : "secondary"}
+              disabled={isAnalyzing}
+              className="w-full"
+            >
+              {isListening ? <><MicOff className="h-4 w-4 mr-2" />Stop</> : <><Mic className="h-4 w-4 mr-2" />Voice Input</>}
             </Button>
 
             <Alert>

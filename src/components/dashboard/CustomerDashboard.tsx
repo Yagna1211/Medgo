@@ -11,6 +11,7 @@ import {
 import { MedicineScanner } from "./MedicineScanner";
 import { SymptomAnalyzer } from "./SymptomAnalyzer";
 import { EmergencyAmbulance } from "./EmergencyAmbulance";
+import { NearbyHospitals } from "./NearbyHospitals";
 import { UserHistory } from "./UserHistory";
 import { UserProfile } from "./UserProfile";
 
@@ -67,6 +68,9 @@ export const CustomerDashboard = ({ user }: CustomerDashboardProps) => {
 
           <TabsContent value="ambulance">
             <EmergencyAmbulance user={user} />
+            <div className="mt-6">
+              <NearbyHospitals user={user} />
+            </div>
           </TabsContent>
 
           <TabsContent value="history">
