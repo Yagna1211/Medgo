@@ -293,12 +293,12 @@ serve(async (req) => {
       console.log(`Inserted ${notificationInserts.length} in-app notifications`);
     }
 
-    // Audit log the SMS dispatch
+    // Audit log the email dispatch
     await supabase
       .from('sms_audit_log')
       .insert({
         user_id: customerId,
-        recipient_count: successfulSMS.length,
+        recipient_count: successfulEmails.length,
         emergency_type: emergencyType,
         consent_given: true
       });

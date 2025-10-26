@@ -178,7 +178,7 @@ export const UserProfile = ({ user }: UserProfileProps) => {
     }));
   };
 
-  const handlePreferenceChange = (preference: string, value: boolean) => {
+  const handlePreferenceChange = async (preference: string, value: boolean) => {
     setProfileData(prev => ({
       ...prev,
       preferences: {
@@ -186,6 +186,41 @@ export const UserProfile = ({ user }: UserProfileProps) => {
         [preference]: value
       }
     }));
+
+    // Auto-save preferences to database
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          user_id: user.id,
+          notification_preferences: preference === 'emailNotifications' ? value : profileData.preferences.emailNotifications,
+          data_sharing_consent: preference === 'dataSharing' ? value : profileData.preferences.dataSharing,
+        }, {
+          onConflict: 'user_id'
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Preference Updated",
+        description: "Your preference has been saved.",
+      });
+    } catch (error: any) {
+      logger.error("Error saving preference:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save preference",
+        variant: "destructive"
+      });
+      // Revert the change
+      setProfileData(prev => ({
+        ...prev,
+        preferences: {
+          ...prev.preferences,
+          [preference]: !value
+        }
+      }));
+    }
   };
 
   const handleSave = async () => {

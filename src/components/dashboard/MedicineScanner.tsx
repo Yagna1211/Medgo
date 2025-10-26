@@ -226,6 +226,11 @@ export const MedicineScanner = ({ user }: MedicineScannerProps) => {
       }
 
       if (data.error) {
+        if (data.error === 'NOT_MEDICINE') {
+          toast.error(data.message || "This is not a medicine. Please provide medicine images!");
+          setShowManualSearch(true);
+          return;
+        }
         throw new Error(data.error);
       }
 

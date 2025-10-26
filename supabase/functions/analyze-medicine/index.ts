@@ -37,10 +37,11 @@ serve(async (req) => {
 
     let extractedText = '';
     let possibleMatches: MedicineMatch[] = [];
+    let imageLabels: string[] = [];
 
-    // Step 1: Extract text using Google Vision API (skip if manual search)
+    // Step 1: Extract text and labels using Google Vision API (skip if manual search)
     if (!manualSearch) {
-      console.log('Starting OCR with Google Vision API...');
+      console.log('Starting OCR and label detection with Google Vision API...');
       
       const visionResponse = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${VISION_AI_API_KEY}`, {
         method: 'POST',
@@ -57,6 +58,10 @@ serve(async (req) => {
                 {
                   type: 'TEXT_DETECTION',
                   maxResults: 1
+                },
+                {
+                  type: 'LABEL_DETECTION',
+                  maxResults: 10
                 }
               ]
             }
@@ -69,6 +74,35 @@ serve(async (req) => {
 
       if (visionData.error) {
         throw new Error(`Vision API error: ${visionData.error.message}`);
+      }
+
+      // Extract labels for medicine validation
+      if (visionData.responses?.[0]?.labelAnnotations) {
+        imageLabels = visionData.responses[0].labelAnnotations.map((label: any) => 
+          label.description.toLowerCase()
+        );
+        console.log('Detected labels:', imageLabels);
+        
+        // Check if image is medicine-related
+        const medicineKeywords = ['pill', 'medicine', 'drug', 'tablet', 'capsule', 'pharmaceutical', 
+                                  'medication', 'prescription', 'bottle', 'package', 'label', 'text'];
+        const isMedicineRelated = imageLabels.some(label => 
+          medicineKeywords.some(keyword => label.includes(keyword))
+        );
+        
+        if (!isMedicineRelated) {
+          return new Response(
+            JSON.stringify({ 
+              error: 'NOT_MEDICINE',
+              message: 'This does not appear to be a medicine image. Please provide a clear photo of medicine packaging or labels.',
+              labels: imageLabels
+            }),
+            { 
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          );
+        }
       }
 
       if (!visionData.responses?.[0]?.textAnnotations?.[0]) {
