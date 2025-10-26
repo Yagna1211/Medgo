@@ -27,7 +27,7 @@ interface AmbulanceRequest {
 }
 interface NotificationAlert {
   id: string;
-  pickup_location: string;
+  pickup_location: unknown;
   emergency_type: string;
   pickup_address?: string;
   description?: string;
@@ -127,6 +127,26 @@ export const DriverDashboard = ({
       }
     };
     fetchRequests();
+  }, [user?.id]);
+
+  // Fetch existing notifications for this driver
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      if (!user?.id) return;
+      try {
+        const { data, error } = await supabase
+          .from('ambulance_notifications')
+          .select('*')
+          .eq('driver_id', user.id)
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        if (data) setNotifications(data);
+      } catch (error) {
+        logger.error('Error fetching notifications:', error);
+      }
+    };
+    fetchNotifications();
   }, [user?.id]);
   const toggleAvailability = async () => {
     console.log('Toggle clicked, user:', user?.id);
