@@ -46,6 +46,9 @@ interface NotificationAlert {
   distance_km?: number;
   created_at: string;
   status: string;
+  customer_name?: string;
+  customer_phone?: string;
+  user_id: string;
 }
 export const DriverDashboard = ({
   user
@@ -142,20 +145,20 @@ export const DriverDashboard = ({
     fetchRequests();
   }, [user?.id]);
 
-  // Fetch existing notifications for this driver
+  // Fetch existing notifications for this driver (both pending and accepted)
   useEffect(() => {
     const fetchNotifications = async () => {
       if (!user?.id) return;
       try {
         const { data, error } = await supabase
           .from('ambulance_notifications')
-          .select('*, ambulance_requests!inner(customer_name, customer_phone)')
+          .select('*')
           .eq('driver_id', user.id)
-          .eq('status', 'pending')
+          .in('status', ['pending', 'accepted'])
           .order('created_at', { ascending: false });
         
         if (error) throw error;
-        if (data) setNotifications(data);
+        if (data) setNotifications(data as NotificationAlert[]);
       } catch (error) {
         logger.error('Error fetching notifications:', error);
       }
@@ -271,26 +274,46 @@ export const DriverDashboard = ({
         }
       }
 
-      // Update notification status
+      // Update ALL notifications for this emergency to 'accepted' status
+      // This ensures other drivers see it's already taken
       await supabase
         .from('ambulance_notifications')
         .update({ status: 'accepted' })
-        .eq('id', notification.id);
+        .eq('user_id', notification.user_id)
+        .eq('emergency_type', notification.emergency_type)
+        .eq('status', 'pending');
 
-      // Add to history
+      // Update ambulance_requests table to mark which driver accepted
+      await supabase
+        .from('ambulance_requests')
+        .update({ 
+          driver_id: user.id,
+          status: 'accepted' 
+        })
+        .eq('customer_id', notification.user_id)
+        .eq('emergency_type', notification.emergency_type)
+        .eq('status', 'pending');
+
+      // Add to history with actual customer details
       await supabase
         .from('driver_request_history')
         .insert({
           driver_id: user.id,
-          customer_name: 'Emergency Request',
-          customer_phone: 'N/A',
+          customer_name: notification.customer_name || 'Emergency Request',
+          customer_phone: notification.customer_phone || 'N/A',
           emergency_type: notification.emergency_type,
           pickup_address: notification.pickup_address,
           action: 'accepted'
         });
 
-      // Remove from notifications
-      setNotifications(prev => prev.filter(n => n.id !== notification.id));
+      // Update UI - mark this notification as accepted instead of removing
+      setNotifications(prev => 
+        prev.map(n => 
+          n.user_id === notification.user_id && n.emergency_type === notification.emergency_type
+            ? { ...n, status: 'accepted' }
+            : n
+        )
+      );
       
       // Refresh history
       const { data: historyData } = await supabase
@@ -321,13 +344,13 @@ export const DriverDashboard = ({
         .delete()
         .eq('id', notification.id);
 
-      // Add to history
+      // Add to history with actual customer details
       await supabase
         .from('driver_request_history')
         .insert({
           driver_id: user.id,
-          customer_name: 'Emergency Request',
-          customer_phone: 'N/A',
+          customer_name: notification.customer_name || 'Emergency Request',
+          customer_phone: notification.customer_phone || 'N/A',
           emergency_type: notification.emergency_type,
           pickup_address: notification.pickup_address,
           action: 'rejected'
@@ -396,53 +419,82 @@ export const DriverDashboard = ({
                   <Car className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                   <p className="text-muted-foreground">No emergency requests</p>
                 </CardContent>
-              </Card> : notifications.map(notification => <Card key={notification.id} className="border-red-500">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="text-red-600">
-                          🚨 {notification.emergency_type}
-                        </CardTitle>
-                        <CardDescription>
-                          {notification.distance_km && `${notification.distance_km.toFixed(1)} km away`}
-                        </CardDescription>
+              </Card> : notifications.map(notification => {
+                const isAccepted = notification.status === 'accepted';
+                
+                return (
+                  <Card key={notification.id} className={isAccepted ? 'border-gray-400 bg-gray-50' : 'border-red-500'}>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className={isAccepted ? 'text-gray-600' : 'text-red-600'}>
+                            🚨 {notification.emergency_type}
+                          </CardTitle>
+                          <CardDescription>
+                            {notification.distance_km && `${notification.distance_km.toFixed(1)} km away`}
+                          </CardDescription>
+                        </div>
+                        <Badge variant={isAccepted ? 'secondary' : 'destructive'}>
+                          {isAccepted ? 'ACCEPTED' : 'URGENT'}
+                        </Badge>
                       </div>
-                      <Badge variant="destructive">URGENT</Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {notification.pickup_address && <div className="flex items-center text-sm">
-                        <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
-                        <span>{notification.pickup_address}</span>
-                      </div>}
-                    {notification.description && <div className="flex items-start text-sm">
-                        <Info className="mr-2 h-4 w-4 text-muted-foreground mt-0.5" />
-                        <span>{notification.description}</span>
-                      </div>}
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Clock className="mr-2 h-4 w-4" />
-                      <span>{new Date(notification.created_at).toLocaleString()}</span>
-                    </div>
-                    
-                    <div className="flex gap-2 pt-2">
-                      <Button 
-                        onClick={() => acceptNotification(notification)} 
-                        className="flex-1 bg-green-600 hover:bg-green-700"
-                      >
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        Accept
-                      </Button>
-                      <Button 
-                        onClick={() => rejectNotification(notification)} 
-                        variant="destructive"
-                        className="flex-1"
-                      >
-                        <XCircle className="mr-2 h-4 w-4" />
-                        Reject
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>)}
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {notification.customer_name && (
+                        <div className="flex items-center text-sm">
+                          <User className="mr-2 h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">Patient: {notification.customer_name}</span>
+                        </div>
+                      )}
+                      {notification.customer_phone && (
+                        <div className="flex items-center text-sm">
+                          <Phone className="mr-2 h-4 w-4 text-muted-foreground" />
+                          <span>Contact: {notification.customer_phone}</span>
+                        </div>
+                      )}
+                      {notification.pickup_address && <div className="flex items-center text-sm">
+                          <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
+                          <span>{notification.pickup_address}</span>
+                        </div>}
+                      {notification.description && <div className="flex items-start text-sm">
+                          <Info className="mr-2 h-4 w-4 text-muted-foreground mt-0.5" />
+                          <span>{notification.description}</span>
+                        </div>}
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <Clock className="mr-2 h-4 w-4" />
+                        <span>{new Date(notification.created_at).toLocaleString()}</span>
+                      </div>
+                      
+                      {isAccepted ? (
+                        <Alert className="mt-3">
+                          <AlertTriangle className="h-4 w-4" />
+                          <AlertDescription>
+                            Already accepted by another ambulance driver
+                          </AlertDescription>
+                        </Alert>
+                      ) : (
+                        <div className="flex gap-2 pt-2">
+                          <Button 
+                            onClick={() => acceptNotification(notification)} 
+                            className="flex-1 bg-green-600 hover:bg-green-700"
+                          >
+                            <CheckCircle className="mr-2 h-4 w-4" />
+                            Accept
+                          </Button>
+                          <Button 
+                            onClick={() => rejectNotification(notification)} 
+                            variant="destructive"
+                            className="flex-1"
+                          >
+                            <XCircle className="mr-2 h-4 w-4" />
+                            Reject
+                          </Button>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
           </TabsContent>
 
           <TabsContent value="notifications" className="space-y-4">

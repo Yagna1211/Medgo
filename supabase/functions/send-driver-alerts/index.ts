@@ -279,6 +279,8 @@ serve(async (req) => {
       pickup_address: pickupAddress,
       emergency_type: emergencyType,
       description: description,
+      customer_name: customerName,
+      customer_phone: customerPhone,
       distance_km: null, // No distance filtering anymore
       status: 'pending'
     }));

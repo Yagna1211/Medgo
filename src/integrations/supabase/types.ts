@@ -74,6 +74,8 @@ export type Database = {
       ambulance_notifications: {
         Row: {
           created_at: string
+          customer_name: string | null
+          customer_phone: string | null
           description: string | null
           distance_km: number | null
           driver_id: string
@@ -86,6 +88,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          customer_name?: string | null
+          customer_phone?: string | null
           description?: string | null
           distance_km?: number | null
           driver_id: string
@@ -98,6 +102,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          customer_name?: string | null
+          customer_phone?: string | null
           description?: string | null
           distance_km?: number | null
           driver_id?: string
