@@ -125,8 +125,7 @@ serve(async (req) => {
     const { data: allDrivers, error: driversError } = await supabase
       .from('profiles')
       .select('user_id, phone, first_name, last_name')
-      .in('user_id', allDriverIds)
-      .not('phone', 'is', null);
+      .in('user_id', allDriverIds);
 
     if (driversError) {
       console.error('Error fetching driver profiles:', driversError);
