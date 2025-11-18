@@ -11,6 +11,13 @@ import { UserProfile } from "./UserProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
+import { 
+  registerServiceWorker, 
+  requestNotificationPermission, 
+  subscribeToPushNotifications,
+  unsubscribeFromPushNotifications,
+  checkPushSubscription 
+} from "@/utils/pushNotifications";
 interface DriverDashboardProps {
   user: any;
 }
@@ -61,6 +68,8 @@ export const DriverDashboard = ({
   const [profile, setProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [locationPermission, setLocationPermission] = useState<'granted' | 'denied' | 'prompt'>('prompt');
+  const [pushNotificationsEnabled, setPushNotificationsEnabled] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
 
   // Check location permission on mount
   useEffect(() => {
@@ -72,6 +81,56 @@ export const DriverDashboard = ({
       });
     }
   }, []);
+
+  // Initialize push notifications
+  useEffect(() => {
+    const initPushNotifications = async () => {
+      if (!user?.id) return;
+
+      // Register service worker
+      await registerServiceWorker();
+
+      // Check notification permission
+      if ('Notification' in window) {
+        setNotificationPermission(Notification.permission);
+        
+        // Check if already subscribed
+        const isSubscribed = await checkPushSubscription();
+        setPushNotificationsEnabled(isSubscribed);
+      }
+    };
+
+    initPushNotifications();
+  }, [user?.id]);
+
+  const handleTogglePushNotifications = async () => {
+    if (!user?.id) return;
+
+    try {
+      if (!pushNotificationsEnabled) {
+        // Request permission and subscribe
+        const hasPermission = await requestNotificationPermission();
+        
+        if (!hasPermission) {
+          toast.error('Notification permission denied. Please enable notifications in your browser settings.');
+          return;
+        }
+
+        await subscribeToPushNotifications(user.id);
+        setPushNotificationsEnabled(true);
+        setNotificationPermission('granted');
+        toast.success('Push notifications enabled! You\'ll receive alerts even when the app is in the background.');
+      } else {
+        // Unsubscribe
+        await unsubscribeFromPushNotifications(user.id);
+        setPushNotificationsEnabled(false);
+        toast.success('Push notifications disabled');
+      }
+    } catch (error) {
+      logger.error('Error toggling push notifications:', error);
+      toast.error('Failed to update push notification settings');
+    }
+  };
 
   // Fetch driver profile and driver_status
   useEffect(() => {
@@ -403,7 +462,38 @@ export const DriverDashboard = ({
           </div>
         </div>
 
-        
+        {/* Push Notifications Card */}
+        <Card className="border-primary/20">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Bell className="h-5 w-5 text-primary" />
+                <div>
+                  <Label htmlFor="push-notifications" className="text-base font-medium cursor-pointer">
+                    Push Notifications
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Get alerts even when the app is in background
+                  </p>
+                </div>
+              </div>
+              <Switch
+                id="push-notifications"
+                checked={pushNotificationsEnabled}
+                onCheckedChange={handleTogglePushNotifications}
+                disabled={notificationPermission === 'denied'}
+              />
+            </div>
+            {notificationPermission === 'denied' && (
+              <Alert className="mt-3">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  Notifications are blocked. Please enable them in your browser settings.
+                </AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="grid w-full grid-cols-4">
