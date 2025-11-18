@@ -129,7 +129,14 @@ export const DriverDashboard = ({
         filter: `driver_id=eq.${user.id}`
       }, payload => {
         const updatedNotification = payload.new as NotificationAlert;
+        console.log('Received UPDATE event:', updatedNotification);
+        
         // If status changed to 'accepted', update the UI to show "Already accepted"
+        if (updatedNotification.status === 'accepted') {
+          console.log('Notification accepted by another driver:', updatedNotification.id);
+          toast.info('⚠️ Request already accepted by another driver');
+        }
+        
         setNotifications(prev => 
           prev.map(n => n.id === updatedNotification.id ? updatedNotification : n)
         );
@@ -289,25 +296,18 @@ export const DriverDashboard = ({
         }
       }
 
-      // Update ALL notifications for this emergency to 'accepted' status
-      // This ensures other drivers see it's already taken
-      await supabase
-        .from('ambulance_notifications')
-        .update({ status: 'accepted' })
-        .eq('user_id', notification.user_id)
-        .eq('emergency_type', notification.emergency_type)
-        .eq('status', 'pending');
+      // Use database function to update ALL notifications for this emergency
+      // This bypasses RLS to ensure all drivers see the update
+      const { error: rpcError } = await supabase.rpc('accept_emergency_request', {
+        p_user_id: notification.user_id,
+        p_emergency_type: notification.emergency_type,
+        p_accepting_driver_id: user.id
+      });
 
-      // Update ambulance_requests table to mark which driver accepted
-      await supabase
-        .from('ambulance_requests')
-        .update({ 
-          driver_id: user.id,
-          status: 'accepted' 
-        })
-        .eq('customer_id', notification.user_id)
-        .eq('emergency_type', notification.emergency_type)
-        .eq('status', 'pending');
+      if (rpcError) {
+        console.error('RPC error:', rpcError);
+        throw rpcError;
+      }
 
       // Add to history with actual customer details
       await supabase

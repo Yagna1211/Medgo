@@ -460,6 +460,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_emergency_request: {
+        Args: {
+          p_accepting_driver_id: string
+          p_emergency_type: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       check_rate_limit: {
         Args: {
           _action: string
