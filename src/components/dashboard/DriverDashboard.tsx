@@ -449,8 +449,8 @@ export const DriverDashboard = ({
                             {notification.distance_km && `${notification.distance_km.toFixed(1)} km away`}
                           </CardDescription>
                         </div>
-                        <Badge variant={isAccepted ? 'secondary' : 'destructive'}>
-                          {isAccepted ? 'ACCEPTED' : 'URGENT'}
+                        <Badge variant="destructive">
+                          URGENT
                         </Badge>
                       </div>
                     </CardHeader>
