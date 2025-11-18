@@ -438,11 +438,11 @@ export const DriverDashboard = ({
                 const isAccepted = notification.status === 'accepted';
                 
                 return (
-                  <Card key={notification.id} className={isAccepted ? 'border-gray-400 bg-gray-50' : 'border-red-500'}>
+                  <Card key={notification.id} className="border-red-500">
                     <CardHeader>
                       <div className="flex items-center justify-between">
                         <div>
-                          <CardTitle className={isAccepted ? 'text-gray-600' : 'text-red-600'}>
+                          <CardTitle className="text-red-600">
                             🚨 {notification.emergency_type}
                           </CardTitle>
                           <CardDescription>
