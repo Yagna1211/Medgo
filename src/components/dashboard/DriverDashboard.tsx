@@ -226,7 +226,7 @@ export const DriverDashboard = ({
     fetchRequests();
   }, [user?.id]);
 
-  // Fetch existing notifications for this driver (only pending)
+  // Fetch existing notifications for this driver (only pending) and mark them as read
   useEffect(() => {
     const fetchNotifications = async () => {
       if (!user?.id) return;
@@ -239,7 +239,18 @@ export const DriverDashboard = ({
           .order('created_at', { ascending: false });
         
         if (error) throw error;
-        if (data) setNotifications(data as NotificationAlert[]);
+        if (data) {
+          setNotifications(data as NotificationAlert[]);
+          
+          // Mark all unread notifications as read
+          const unreadIds = data.filter((n: any) => !n.read_at).map((n: any) => n.id);
+          if (unreadIds.length > 0) {
+            await supabase
+              .from('ambulance_notifications')
+              .update({ read_at: new Date().toISOString() })
+              .in('id', unreadIds);
+          }
+        }
       } catch (error) {
         logger.error('Error fetching notifications:', error);
       }
@@ -340,8 +351,23 @@ export const DriverDashboard = ({
       setIsLoading(false);
     }
   };
+  const markNotificationAsRead = async (notificationId: string) => {
+    try {
+      await supabase
+        .from('ambulance_notifications')
+        .update({ read_at: new Date().toISOString() })
+        .eq('id', notificationId)
+        .is('read_at', null); // Only update if not already read
+    } catch (error) {
+      logger.error('Error marking notification as read:', error);
+    }
+  };
+
   const acceptNotification = async (notification: NotificationAlert) => {
     try {
+      // Mark as read when accepting
+      await markNotificationAsRead(notification.id);
+
       // Extract location coordinates
       const locationStr = notification.pickup_location as any;
       let lat: number | null = null;
