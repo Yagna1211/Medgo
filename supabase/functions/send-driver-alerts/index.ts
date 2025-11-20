@@ -89,10 +89,10 @@ serve(async (req) => {
 
     const allDriverIds = driverRoles.map(d => d.user_id);
 
-    // Fetch driver profiles for all drivers with email
+    // Fetch driver profiles for all drivers with email and phone
     const { data: allDrivers, error: driversError } = await supabase
       .from('profiles')
-      .select('user_id, email, first_name, last_name')
+      .select('user_id, email, phone, first_name, last_name')
       .in('user_id', allDriverIds);
 
     if (driversError) {
@@ -271,6 +271,44 @@ serve(async (req) => {
 
     console.log(`Emails sent to ${successfulEmails.length} out of ${allDrivers.length} drivers`);
 
+    // Send SMS to all drivers with phone numbers
+    const smsMessage = `🚨 EMERGENCY ALERT 🚨
+Type: ${emergencyType}
+Patient: ${customerName}
+Phone: ${customerPhone}
+Location: ${pickupAddress || `Lat: ${customerLat}, Lng: ${customerLng}`}
+${description ? `Details: ${description}` : ''}
+View location: https://www.google.com/maps?q=${customerLat},${customerLng}`;
+
+    const smsPromises = allDrivers
+      .filter(driver => driver.phone)
+      .map(async (driver) => {
+        try {
+          const { error: smsError } = await supabase.functions.invoke('send-sms', {
+            body: {
+              phoneNumber: driver.phone,
+              message: smsMessage
+            }
+          });
+
+          if (smsError) {
+            console.error(`SMS error for ${driver.phone}:`, smsError);
+            return { phone: driver.phone, success: false };
+          }
+
+          console.log(`SMS sent successfully to ${driver.phone}`);
+          return { phone: driver.phone, success: true };
+        } catch (error) {
+          console.error(`SMS error for ${driver.phone}:`, error);
+          return { phone: driver.phone, success: false };
+        }
+      });
+
+    const smsResults = await Promise.all(smsPromises);
+    const successfulSMS = smsResults.filter(result => result && result.success);
+    
+    console.log(`SMS sent to ${successfulSMS.length} out of ${allDrivers.filter(d => d.phone).length} drivers with phone numbers`);
+
     // Insert notifications into ambulance_notifications table for in-app alerts (for all drivers)
     const notificationInserts = allDrivers.map(driver => ({
       user_id: customerId,
@@ -310,7 +348,8 @@ serve(async (req) => {
       message: `Emergency alert sent to ${allDrivers.length} ambulance drivers`,
       requestId: newRequest.id,
       driversNotified: allDrivers.length,
-      emailsDelivered: successfulEmails.length
+      emailsDelivered: successfulEmails.length,
+      smsDelivered: successfulSMS.length
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
