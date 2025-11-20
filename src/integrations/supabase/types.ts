@@ -76,6 +76,7 @@ export type Database = {
           created_at: string
           customer_name: string | null
           customer_phone: string | null
+          delivered_at: string | null
           description: string | null
           distance_km: number | null
           driver_id: string
@@ -83,6 +84,7 @@ export type Database = {
           id: string
           pickup_address: string | null
           pickup_location: unknown
+          read_at: string | null
           status: string
           user_id: string
         }
@@ -90,6 +92,7 @@ export type Database = {
           created_at?: string
           customer_name?: string | null
           customer_phone?: string | null
+          delivered_at?: string | null
           description?: string | null
           distance_km?: number | null
           driver_id: string
@@ -97,6 +100,7 @@ export type Database = {
           id?: string
           pickup_address?: string | null
           pickup_location: unknown
+          read_at?: string | null
           status?: string
           user_id: string
         }
@@ -104,6 +108,7 @@ export type Database = {
           created_at?: string
           customer_name?: string | null
           customer_phone?: string | null
+          delivered_at?: string | null
           description?: string | null
           distance_km?: number | null
           driver_id?: string
@@ -111,6 +116,7 @@ export type Database = {
           id?: string
           pickup_address?: string | null
           pickup_location?: unknown
+          read_at?: string | null
           status?: string
           user_id?: string
         }
@@ -430,6 +436,47 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      sms_delivery_status: {
+        Row: {
+          ambulance_request_id: string | null
+          created_at: string | null
+          delivered_at: string | null
+          delivery_status: string
+          driver_id: string
+          driver_phone: string
+          error_message: string | null
+          id: string
+        }
+        Insert: {
+          ambulance_request_id?: string | null
+          created_at?: string | null
+          delivered_at?: string | null
+          delivery_status?: string
+          driver_id: string
+          driver_phone: string
+          error_message?: string | null
+          id?: string
+        }
+        Update: {
+          ambulance_request_id?: string | null
+          created_at?: string | null
+          delivered_at?: string | null
+          delivery_status?: string
+          driver_id?: string
+          driver_phone?: string
+          error_message?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_delivery_status_ambulance_request_id_fkey"
+            columns: ["ambulance_request_id"]
+            isOneToOne: false
+            referencedRelation: "ambulance_requests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       symptom_analyses: {
         Row: {

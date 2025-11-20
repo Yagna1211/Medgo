@@ -21,6 +21,7 @@ import { useVoiceTrigger } from "@/hooks/use-voice-trigger";
 import { MapContainer, TileLayer, CircleMarker, Polyline, Popup } from "react-leaflet";
 import { emergencyBookingSchema } from "@/lib/validationSchemas";
 import { logger } from "@/lib/logger";
+import { DeliveryStatus } from "./DeliveryStatus";
 interface EmergencyBookingProps {
   user: any;
 }
@@ -41,6 +42,7 @@ export const EmergencyAmbulance = ({ user }: EmergencyBookingProps) => {
   const radiusKm = 5;
   const [drivers, setDrivers] = useState<{ driver_id: string; lat: number; lng: number; distance_km: number }[]>([]);
   const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
+  const [lastRequestId, setLastRequestId] = useState<string | null>(null);
 
   // Auto-request location on mount and fetch user profile
   useEffect(() => {
@@ -125,13 +127,14 @@ export const EmergencyAmbulance = ({ user }: EmergencyBookingProps) => {
       if (error) throw error;
       
       if (data?.success) {
-        toast(`🚨 Emergency alert sent to ${data.driversNotified} nearby ambulance drivers! Help is on the way.`);
+        setLastRequestId(data.requestId); // Store request ID for delivery status
+        toast.success(`🚨 Emergency alert sent to ${data.driversNotified} nearby ambulance drivers! Help is on the way.`);
       } else {
-        toast(data?.message || "No available drivers found nearby. Please try emergency services: 108");
+        toast.error(data?.message || "No available drivers found nearby. Please try emergency services: 108");
       }
     } catch (e) {
       logger.error('Emergency alert error:', e);
-      toast("Failed to send emergency alerts. Please call 108 immediately!");
+      toast.error("Failed to send emergency alerts. Please call 108 immediately!");
     } finally {
       setIsBooking(false);
     }
@@ -270,6 +273,10 @@ const getCurrentLocation = () => {
         </p>
       </div>
 
+      {/* Show delivery status if request was sent */}
+      {lastRequestId && (
+        <DeliveryStatus requestId={lastRequestId} />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Map Section */}

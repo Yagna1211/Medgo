@@ -271,7 +271,7 @@ serve(async (req) => {
 
     console.log(`Emails sent to ${successfulEmails.length} out of ${allDrivers.length} drivers`);
 
-    // Send SMS to all drivers with phone numbers
+    // Send SMS to all drivers with phone numbers and track delivery status
     const smsMessage = `🚨 EMERGENCY ALERT 🚨
 Type: ${emergencyType}
 Patient: ${customerName}
@@ -280,6 +280,7 @@ Location: ${pickupAddress || `Lat: ${customerLat}, Lng: ${customerLng}`}
 ${description ? `Details: ${description}` : ''}
 View location: https://www.google.com/maps?q=${customerLat},${customerLng}`;
 
+    const smsDeliveryRecords = [];
     const smsPromises = allDrivers
       .filter(driver => driver.phone)
       .map(async (driver) => {
@@ -291,6 +292,17 @@ View location: https://www.google.com/maps?q=${customerLat},${customerLng}`;
             }
           });
 
+          const deliveryRecord = {
+            ambulance_request_id: newRequest.id,
+            driver_id: driver.user_id,
+            driver_phone: driver.phone,
+            delivery_status: smsError ? 'failed' : 'delivered',
+            delivered_at: smsError ? null : new Date().toISOString(),
+            error_message: smsError?.message || null
+          };
+          
+          smsDeliveryRecords.push(deliveryRecord);
+
           if (smsError) {
             console.error(`SMS error for ${driver.phone}:`, smsError);
             return { phone: driver.phone, success: false };
@@ -300,12 +312,35 @@ View location: https://www.google.com/maps?q=${customerLat},${customerLng}`;
           return { phone: driver.phone, success: true };
         } catch (error) {
           console.error(`SMS error for ${driver.phone}:`, error);
+          
+          smsDeliveryRecords.push({
+            ambulance_request_id: newRequest.id,
+            driver_id: driver.user_id,
+            driver_phone: driver.phone,
+            delivery_status: 'failed',
+            delivered_at: null,
+            error_message: error.message
+          });
+          
           return { phone: driver.phone, success: false };
         }
       });
 
     const smsResults = await Promise.all(smsPromises);
     const successfulSMS = smsResults.filter(result => result && result.success);
+    
+    // Store SMS delivery status in database
+    if (smsDeliveryRecords.length > 0) {
+      const { error: deliveryError } = await supabase
+        .from('sms_delivery_status')
+        .insert(smsDeliveryRecords);
+      
+      if (deliveryError) {
+        console.error('Error storing SMS delivery status:', deliveryError);
+      } else {
+        console.log(`Stored ${smsDeliveryRecords.length} SMS delivery records`);
+      }
+    }
     
     console.log(`SMS sent to ${successfulSMS.length} out of ${allDrivers.filter(d => d.phone).length} drivers with phone numbers`);
 
