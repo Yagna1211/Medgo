@@ -14,82 +14,98 @@ serve(async (req) => {
   try {
     const { symptoms, additionalInfo, userId } = await req.json()
     
-    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY')
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')
     
-    if (!GEMINI_API_KEY) {
-      throw new Error('Gemini API key not configured')
+    if (!LOVABLE_API_KEY) {
+      throw new Error('Lovable API key not configured')
     }
 
     const symptomsText = symptoms.join(', ')
     
-    const prompt = `As a medical AI assistant, analyze these symptoms and provide a comprehensive health assessment. 
+    const prompt = `As a medical AI assistant, analyze these symptoms and provide a comprehensive health assessment.
 
 Symptoms: ${symptomsText}
 Additional Information: ${additionalInfo || 'None provided'}
 
-IMPORTANT DISCLAIMERS TO INCLUDE:
-- This is not a substitute for professional medical advice
-- Always consult healthcare professionals for proper diagnosis
-- In case of emergency, seek immediate medical attention
+Analyze these symptoms and provide 2-4 possible conditions. Focus on common conditions but also mention when serious conditions should be ruled out.
 
-Please provide the response in this exact JSON structure:
-{
-  "conditions": [
-    {
-      "name": "Condition name",
-      "probability": "High/Medium/Low",
-      "description": "Brief description of the condition",
-      "severity": "Mild/Moderate/Severe",
-      "recommendations": ["Recommendation 1", "Recommendation 2"]
-    }
-  ],
-  "urgency": "Low/Medium/High/Emergency",
-  "generalRecommendations": [
-    "General recommendation 1",
-    "General recommendation 2",
-    "Always consult a healthcare professional",
-    "This analysis is not a substitute for medical diagnosis"
-  ]
-}
+IMPORTANT: Include disclaimers that this is not a substitute for professional medical advice, always consult healthcare professionals, and seek immediate medical attention in emergencies.`
 
-Provide 2-4 possible conditions based on the symptoms. Focus on common conditions but also mention when serious conditions should be ruled out.`
-
-    const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`, {
+    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: prompt
-          }]
-        }]
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: 'You are a medical AI assistant that provides health assessments based on symptoms.' },
+          { role: 'user', content: prompt }
+        ],
+        tools: [{
+          type: 'function',
+          function: {
+            name: 'analyze_symptoms',
+            description: 'Analyze symptoms and return structured health assessment',
+            parameters: {
+              type: 'object',
+              properties: {
+                conditions: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      name: { type: 'string', description: 'Name of the condition' },
+                      probability: { type: 'string', enum: ['High', 'Medium', 'Low'] },
+                      description: { type: 'string', description: 'Brief description of the condition' },
+                      severity: { type: 'string', enum: ['Mild', 'Moderate', 'Severe'] },
+                      recommendations: { type: 'array', items: { type: 'string' } }
+                    },
+                    required: ['name', 'probability', 'description', 'severity', 'recommendations']
+                  }
+                },
+                urgency: { type: 'string', enum: ['Low', 'Medium', 'High', 'Emergency'] },
+                generalRecommendations: { type: 'array', items: { type: 'string' } }
+              },
+              required: ['conditions', 'urgency', 'generalRecommendations']
+            }
+          }
+        }],
+        tool_choice: { type: 'function', function: { name: 'analyze_symptoms' } }
       })
     })
 
-    const geminiData = await geminiResponse.json()
-    console.log('Gemini API response:', geminiData)
-
-    if (!geminiData.candidates?.[0]?.content?.parts?.[0]?.text) {
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text()
+      console.error('AI Gateway error:', aiResponse.status, errorText)
+      
+      if (aiResponse.status === 429) {
+        return new Response(
+          JSON.stringify({ error: 'Rate limit exceeded. Please try again in a moment.' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      
+      if (aiResponse.status === 402) {
+        return new Response(
+          JSON.stringify({ error: 'Service temporarily unavailable. Please contact support.' }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      
       throw new Error('Failed to analyze symptoms')
     }
 
-    const analysisText = geminiData.candidates[0].content.parts[0].text
-    
-    // Extract JSON from the response
-    let analysis
-    try {
-      const jsonMatch = analysisText.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        analysis = JSON.parse(jsonMatch[0])
-      } else {
-        throw new Error('No JSON found in response')
-      }
-    } catch (parseError) {
-      console.error('JSON parsing error:', parseError)
-      throw new Error('Failed to parse symptom analysis')
+    const aiData = await aiResponse.json()
+    console.log('AI Gateway response:', JSON.stringify(aiData))
+
+    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0]
+    if (!toolCall) {
+      throw new Error('No tool call in AI response')
     }
+
+    const analysis = JSON.parse(toolCall.function.arguments)
 
     // Save to database
     const supabase = createClient(
