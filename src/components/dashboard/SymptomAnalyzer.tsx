@@ -151,7 +151,19 @@ export const SymptomAnalyzer = ({ user }: SymptomAnalyzerProps) => {
       });
 
       if (error) {
-        throw new Error(error.message || 'Failed to analyze symptoms');
+        // Check for specific error messages
+        const errorMessage = error.message || 'Failed to analyze symptoms';
+        
+        if (errorMessage.includes('Rate limit')) {
+          toast.error('Too many requests. Please wait a moment and try again.');
+        } else if (errorMessage.includes('temporarily unavailable')) {
+          toast.error('Service temporarily unavailable. Please try again later or contact support.');
+        } else {
+          toast.error(`Analysis failed: ${errorMessage}`);
+        }
+        
+        setIsAnalyzing(false);
+        return;
       }
 
       // Transform the API response to match our interface - Keep only top 3 conditions
@@ -160,7 +172,7 @@ export const SymptomAnalyzer = ({ user }: SymptomAnalyzerProps) => {
           name: condition.name,
           probability: parseInt(condition.probability.replace(/[^\d]/g, '')) || 50,
           description: condition.description,
-          severity: condition.severity as 'low' | 'medium' | 'high',
+          severity: condition.severity.toLowerCase() as 'low' | 'medium' | 'high',
           recommendations: condition.recommendations
         })),
         urgency: data.urgency.toLowerCase() as 'low' | 'medium' | 'high' | 'emergency',
@@ -168,9 +180,9 @@ export const SymptomAnalyzer = ({ user }: SymptomAnalyzerProps) => {
       };
 
       setAnalysis(transformedAnalysis);
-      toast(`Analysis Complete! Found ${transformedAnalysis.conditions.length} possible conditions and saved to your history.`);
+      toast.success(`Analysis Complete! Found ${transformedAnalysis.conditions.length} possible conditions.`);
     } catch (error: any) {
-      toast(`Analysis failed: ${error.message}`);
+      toast.error(`Analysis failed: ${error.message}`);
     } finally {
       setIsAnalyzing(false);
     }
